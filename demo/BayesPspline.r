@@ -1,0 +1,124 @@
+# R script for Bayesian P-splines using INLA
+# author: Cajo.terBraak@wur.nl 
+# copyright: CC-BY (Creative Commons Attribution 3.0 Netherlands
+rm(list=ls(all=TRUE))
+library(INLA)
+library(faraway) # for ilogit 
+#source("Rfunctions/smooth_inla123.r")
+library(BayesianPsplines)
+
+Data <- read.csv("../data/germination_Ranlin_transect_wl_ntot.csv")[,-1]
+summary(Data)
+names(Data)
+species= "Ran lin"
+
+
+my.ylab = "germinated (%)"
+my.xlab = "water level (m)" 
+fam = "betabinomial"
+
+
+# transform from proportion to logit scale
+transform <- function(x){x = ifelse(abs(x)<0.025,0.025,x);x = ifelse(abs(x-1)<0.025,0.975,x); logit(x)}
+
+# backtransform from logit scale to a percentage scale
+backtransform <- function(x){100*ilogit(x)}
+ylim =c(-5,105)
+xrange= c(-1.6, 0.45) # depth ##range of predictor, a bit extended
+x= Data$wl; y = Data$y; Ntrials = Data$Ntrials; group = Data$transect
+
+hyperB = list(prec = list(prior = "loggamma", param = c(1, 0.001)))
+
+rs0 = NULL
+rs0 = smooth_inla0(x,y, Ntrials, family = fam, hyperB= hyperB, xrange= xrange, diff.order = 3)
+rs1 = NULL  
+rs1 = smooth_inla1(x,y, Ntrials, family = fam, hyperB= hyperB, xrange= xrange, diff.order = 3)
+rs2 = NULL  
+rs2 = smooth_inla2(x,y, Ntrials, family = fam, hyperB= hyperB, xrange= xrange, diff.order = 3)
+
+
+pred0 = rs0$pred
+pred1 = rs1$pred[-1,]
+pred2 = rs2$pred[-c(1,2),]
+# nearly identical fits, as intended; small differences due to???
+
+pmax = max(pred0[, 6])
+pmin = min(pred0[, 4])
+plim = c(pmin, pmax)
+plot(rs0$x_grid, pred0[,5], ty = 'l', ylim = plim)
+lines(rs0$x_grid, pred0[,4], lty = 'dashed')
+lines(rs0$x_grid, pred0[,6], lty = 'dashed')
+
+col1 = 'red'
+lines(rs0$x_grid, pred1[,5], ty = 'l', col= col1)
+lines(rs0$x_grid, pred1[,4], lty = 'dashed', col= col1)
+lines(rs0$x_grid, pred1[,6], lty = 'dashed', col= col1)
+
+col1 = 'blue'
+lines(rs0$x_grid, pred2[,5], ty = 'l', col= col1)
+lines(rs0$x_grid, pred2[,4], lty = 'dashed', col= col1)
+lines(rs0$x_grid, pred2[,6], lty = 'dashed', col= col1)
+
+intercept = rs2$pred[1,]
+rbind(intercept, rs1$pred[1,])
+slope = rs2$pred[2,]; slope
+
+lambda = 1.427 
+Gumbel = paste("expression:logdens = -0.5*log_precision-", lambda, "*exp(-0.5*log_precision)+log(0.5*", lambda,"); return(logdens);", sep = "")
+print(Gumbel)
+hyperGumbel = list(prec = list(prior = Gumbel, param = numeric(0)))
+rs3 = NULL  
+rs3 = smooth_inla3(x,group, y, Ntrials, family = fam, hyperB= hyperGumbel, xrange= xrange, diff.order = 3)
+# intercept
+intercept = rs3$pred[1,]
+Pred.rw = rs3$pred[-1,]
+x_grid = rs3$x_grid; irange = rs3$indices$grid#
+
+y_pred = Pred.rw[irange,5] # median
+y_lo =  Pred.rw[irange,4] # lower quantile
+y_hi =  Pred.rw[irange,6] # upper quantile
+y_pred_mean = Pred.rw[irange,"mean"] # mean on transformed scale
+y_pred_sd = Pred.rw[irange,"sd"] # sd on transformed scale
+
+
+
+plot(x_grid, backtransform(y_pred), type = "l", ylim= ylim, ylab= my.ylab,xlab = my.xlab , main = species)
+lines(x_grid, backtransform(y_hi), lty="dashed")
+lines(x_grid, backtransform(y_lo), lty="dashed")
+# points(x, 100*y/Ntrials) # raw data
+
+# from residuals on the transformed scale
+yhat = transform(rs3$fitted[,"0.5quant"])
+observed = transform(y/Ntrials) # on transformed scale
+residual = observed - yhat
+irangex = rs3$indices$x#
+componentplus = residual + Pred.rw[irangex,"0.5quant"] 
+points(x, backtransform(componentplus) ) # component-plus-residual plot
+
+#source("Rfunctions/smooth_inla.r")  # the most general inla function for Bayesian P-splines
+
+mydata = data.frame(y = Data$y, group = Data$transect, x = Data$wl)
+Ntrials = Data$Ntrials
+xrange = rbind(xrange)
+rs = NULL  
+rs = smooth_inla(mydata, Ntrials, family = fam, hyperB= hyperGumbel, xrange= xrange, diff.order = 3)
+# intercept
+intercept = rs$pred[1,]
+k = 1 # first predictor
+pred = component_plus_residual(rs, k, mplot = TRUE, ylim= ylim, ylab= my.ylab,xlab = my.xlab , main = species)
+
+mydata = data.frame(y = Data$y, group = Data$transect, x1 = Data$wl, x2 = Data$log_ntot)
+xrange = rbind(xrange)
+xrange = rbind(xrange,  c(-3.4, 3.2)) # log(ntot) 
+
+rs = NULL  
+rs = smooth_inla(mydata, Ntrials, family = fam, hyperB= hyperB, xrange= xrange, diff.order = c(3,3))
+# intercept
+intercept = rs$pred[1,]
+my.xlab = c("water level (m)" ,"ln ntot")
+par(mfrow=c(1,2))
+k = 1 # first predictor
+pred1 = component_plus_residual(rs, k, mplot = TRUE, ylim= ylim, ylab= my.ylab,xlab = my.xlab[1], main = species)
+k = 2 # second predictor
+pred2 = component_plus_residual(rs, k, mplot = TRUE, ylim= ylim, ylab= my.ylab,xlab = my.xlab[2], main = species)
+
