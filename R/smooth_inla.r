@@ -5,7 +5,7 @@
 #' zero, one or more predictors with or without an additional random group factor
 #'   
 #'
-#' @details
+#' @details   aha
 #' @param data A data frame with columns y [group] x1 x2 ... , all numeric except
 #' group which is a factor and is optional. The response y should always be the first 
 #' column, and, if present, group second. All further vectors are used a predictors
