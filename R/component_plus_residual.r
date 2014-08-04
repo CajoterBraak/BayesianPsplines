@@ -1,3 +1,4 @@
+#' @export
 component_plus_residual = function(rs, k=1, mplot = FALSE, ylim = NULL, ...){
   # rs is an object created using a call to smooth_inla
   # k is the number of predictor to fit

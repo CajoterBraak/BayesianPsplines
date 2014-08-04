@@ -18,7 +18,7 @@
 #' @param ngrid Number of grid points  for prediction. Default 100
  
 #' @examples Example program in BayesPspline.r 
-
+#' @export
 
 
 smooth_inla <- function(data,  Ntrials =NULL, family = "gaussian", hyperB, 

@@ -30,11 +30,13 @@ x= Data$wl; y = Data$y; Ntrials = Data$Ntrials; group = Data$transect
 hyperB = list(prec = list(prior = "loggamma", param = c(1, 0.001)))
 
 rs0 = NULL
-rs0 = smooth_inla0(x,y, Ntrials, family = fam, hyperB= hyperB, xrange= xrange, diff.order = 3)
+#rs0 = smooth_inla0(x,y, Ntrials, family = fam, hyperB= hyperB, xrange= xrange, diff.order = 3)
+rs0 = BayesianPsplines:::smooth_inla0(x,y, Ntrials, family = fam, hyperB= hyperB, xrange= xrange, diff.order = 3)
+
 rs1 = NULL  
-rs1 = smooth_inla1(x,y, Ntrials, family = fam, hyperB= hyperB, xrange= xrange, diff.order = 3)
+rs1 = BayesianPsplines:::smooth_inla1(x,y, Ntrials, family = fam, hyperB= hyperB, xrange= xrange, diff.order = 3)
 rs2 = NULL  
-rs2 = smooth_inla2(x,y, Ntrials, family = fam, hyperB= hyperB, xrange= xrange, diff.order = 3)
+rs2 = BayesianPsplines:::smooth_inla2(x,y, Ntrials, family = fam, hyperB= hyperB, xrange= xrange, diff.order = 3)
 
 
 pred0 = rs0$pred
@@ -68,7 +70,7 @@ Gumbel = paste("expression:logdens = -0.5*log_precision-", lambda, "*exp(-0.5*lo
 print(Gumbel)
 hyperGumbel = list(prec = list(prior = Gumbel, param = numeric(0)))
 rs3 = NULL  
-rs3 = smooth_inla3(x,group, y, Ntrials, family = fam, hyperB= hyperGumbel, xrange= xrange, diff.order = 3)
+rs3 = BayesianPsplines:::smooth_inla3(x,group, y, Ntrials, family = fam, hyperB= hyperGumbel, xrange= xrange, diff.order = 3)
 # intercept
 intercept = rs3$pred[1,]
 Pred.rw = rs3$pred[-1,]
