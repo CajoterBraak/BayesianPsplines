@@ -30,7 +30,7 @@ component_plus_residual = function(rs, k=1, transform = function(x){x}, backtran
     plot(x_grid, backtransform(y_pred), type = "l", ylim = plim,  ...)
     lines(x_grid, backtransform(y_hi), lty="dashed")
     lines(x_grid, backtransform(y_lo), lty="dashed")
-    points(rs$x[,k], backtransform(componentplus) ) # component-plus-residual plot
+    points(rs$x[,k], backtransform(componentplus),... ) # component-plus-residual plot
   }
   pred.out = data.frame(x_grid,mean=rs$pred[irange,"mean"] , sd=rs$pred[irange,"sd"],y_lo, y_pred, y_hi) # on transformed scale
   names(pred.out)[-1]= names(rs$pred)[-c(1,7,8)] 
