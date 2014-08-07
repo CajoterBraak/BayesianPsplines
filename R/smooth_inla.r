@@ -19,9 +19,8 @@
  
 #' @examples Example program in BayesPspline.r 
 #' @export
-
-
-smooth_inla <- function(data,  Ntrials =NULL, family = "gaussian", hyperB, 
+#' 
+smooth_inla <- function(data,  Ntrials =NULL, family = "gaussian", hyperB, weights = NULL,
      xrange= NULL, ngrid = 100, nseg = 20 , degree = 3, 
     diff.order = rep(2,ncol(data)), grid_with_x = TRUE, q = c(0.05, 0.5, 0.95), verbose = FALSE ){
 # smooth_inla assumes that data consists of the columns (in this order)
@@ -98,22 +97,44 @@ formula.P = as.formula(formula.txt)
 contr.comp = inla.set.control.compute.default()
 contr.comp$dic = TRUE
 mod.P = NULL
-if (family %in% c("binomial","betabinomial")){
-mod.P = inla(formula.P, family = family, Ntrials = Ntrials_plus, data = datalist, 
-      control.predictor = list(A = A.matrix, compute = TRUE, quantiles = q, link = NULL), 
-              control.compute = contr.comp,
-              lincomb = lc.grid)
-} else if (family %in% c("gaussian","t","lognormal")){
+
+if (is.null(weights)) {
+  if (family %in% c("binomial","betabinomial")){
+  mod.P = inla(formula.P, family = family, Ntrials = Ntrials_plus, data = datalist, 
+        control.predictor = list(A = A.matrix, compute = TRUE, quantiles = q, link = NULL), 
+                control.compute = contr.comp,
+                lincomb = lc.grid)
+  } else if (family %in% c("gaussian","t","lognormal")){
+    mod.P = inla(formula.P, family = family, data = datalist, 
+                 control.predictor = list(A = A.matrix, compute = TRUE, quantiles = q, link = NULL), 
+                 control.family = list(hyper = list(prec = prior.observation.precision)),
+                 control.compute = contr.comp,
+                 lincomb = lc.grid)
+  } else { 
   mod.P = inla(formula.P, family = family, data = datalist, 
                control.predictor = list(A = A.matrix, compute = TRUE, quantiles = q, link = NULL), 
-               control.family = list(hyper = list(prec = prior.observation.precision)),
                control.compute = contr.comp,
-               lincomb = lc.grid)
+               lincomb = lc.grid) 
+  }
 } else { 
-mod.P = inla(formula.P, family = family, data = datalist, 
-             control.predictor = list(A = A.matrix, compute = TRUE, quantiles = q, link = NULL), 
-             control.compute = contr.comp,
-             lincomb = lc.grid) 
+  inla.setOption(enable.inla.argument.weights=TRUE)
+  if (family %in% c("binomial","betabinomial")){
+    mod.P = inla(formula.P, family = family, Ntrials = Ntrials_plus, data = datalist, 
+                 control.predictor = list(A = A.matrix, compute = TRUE, quantiles = q, link = NULL), 
+                 control.compute = contr.comp,
+                 lincomb = lc.grid)
+  } else if (family %in% c("gaussian","t","lognormal")){
+    mod.P = inla(formula.P, family = family, data = datalist, weights= weights,
+                 control.predictor = list(A = A.matrix, compute = TRUE, quantiles = q, link = NULL), 
+                 control.family = list(hyper = list(prec = prior.observation.precision)),
+                 control.compute = contr.comp,
+                 lincomb = lc.grid)
+  } else { 
+    mod.P = inla(formula.P, family = family, data = datalist, weights= weights,
+                 control.predictor = list(A = A.matrix, compute = TRUE, quantiles = q, link = NULL), 
+                 control.compute = contr.comp,
+                 lincomb = lc.grid) 
+  }       
 }
 
 if (verbose) summary(mod.P)
