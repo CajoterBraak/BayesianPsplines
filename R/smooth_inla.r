@@ -32,7 +32,7 @@ smooth_inla <- function(data,  Ntrials =NULL, family = "gaussian", hyperB,
 # copyright: CC-BY (Creative Commons Attribution 3.0 Netherlands)
   basisP = list()
   if (is.null(data$group)) dataX = data[,-1, drop = FALSE] else dataX = data[,-c(1,2), drop = FALSE]
-  if (is.null(data$group)) Group = NULL else Group = model.matrix(~-1+group )
+  if (is.null(data$group)) Group = NULL else Group = model.matrix(~-1+group, data)
   Amlist = list(intercept = matrix(1, nrow = length(data$y), ncol = 1))
   for (k in seq_len(ncol(dataX))) {
     if (is.null(xrange)) xrange.k = c(min(dataX[[k]]),max(dataX[[k]])) else 
