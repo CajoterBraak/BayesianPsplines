@@ -18,7 +18,7 @@ component_plus_residual = function(rs, k=1, transform = function(x){x}, backtran
     observed = transform(rs$y/rs$Ntrials) # on transformed scale
   }
   residual = observed - yhat
-  if (!is.null(rs$indices_B_grid[[k]]$x)) {
+  if (!is.null(rs$indices_B_grid[[k]]$x) && ncol(rs$x_grid)>1) {
     irangex = rs$indices_B_grid[[k]]$x 
     componentplus = residual + rs$pred[irangex,"0.5quant"] 
   }else componentplus = observed  # or find closest x_grid to x and use that fit!
