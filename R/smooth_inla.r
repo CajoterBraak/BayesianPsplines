@@ -13,15 +13,17 @@
 #' @param Ntrials Number of binomial trials with same length as y, if family is binomial
 #' @param family The family argument passed to INLA, see \code{\link[INLA]{inla}} 
 #' @param hyperB A list of hyperparameter for each of the predictors
+#' @param offset A optional offset for the linear predictor
+#' @param offset_par Value of the offset used for predictions.
 #' @param xrange A matrix with in rows the min and max of the range of 
 #' the B-spline basis for each predictor. Default: the data range of each predictor
 #' @param ngrid Number of grid points  for prediction. Default 100
  
 #' @examples Example program in BayesPspline.r 
 #' @export
-#' 
-smooth_inla <- function(data,  Ntrials =NULL, family = "gaussian", hyperB, weights = NULL,
-     xrange= NULL, ngrid = 100, nseg = 20 , degree = 3, 
+
+smooth_inla <- function(data,  Ntrials, family = "gaussian", hyperB, weights, offset,
+     offset_par, xrange, ngrid = 100, nseg = 20 , degree = 3, 
     diff.order = rep(2,ncol(data)), grid_with_x = TRUE, q = c(0.05, 0.5, 0.95), verbose = FALSE ){
 # smooth_inla assumes that data consists of the columns (in this order)
 #  y and optionally a group factor
@@ -34,7 +36,7 @@ smooth_inla <- function(data,  Ntrials =NULL, family = "gaussian", hyperB, weigh
   if (is.null(data$group)) Group = NULL else Group = model.matrix(~-1+group, data)
   Amlist = list(intercept = matrix(1, nrow = length(data$y), ncol = 1))
   for (k in seq_len(ncol(dataX))) {
-    if (is.null(xrange)) xrange.k = c(min(dataX[[k]]),max(dataX[[k]])) else 
+    if (missing(xrange)) xrange.k = c(min(dataX[[k]]),max(dataX[[k]])) else 
       if (is.matrix(xrange)) xrange.k = xrange[k,] else xrange.k = xrange
     basisP[[k]] = prepare_basis_P(dataX[[k]], xrange.k,diff.order[k], ngrid, nseg, degree, grid_with_x=grid_with_x)     
     Amlist[[k+1]] = basisP[[k]]$B
@@ -55,7 +57,12 @@ smooth_inla <- function(data,  Ntrials =NULL, family = "gaussian", hyperB, weigh
   A.matrix = rBind(Diagonal(nB), A.matrix) 
   # this is Aplus: to allow predictions with credible regions via B_grid to work
   yplus = c(rep(NA, nB), data$y)
-  if (!is.null(Ntrials)) Ntrials_plus = c(rep(1, nB), Ntrials)else Ntrials_plus = NULL
+
+  if (!missing(offset)) {
+    if(missing(offset_par)) offset_par = mean(offset)
+    offset = c(rep(offset_par,nB),offset)
+  } else offset = NULL
+  if (!missing(Ntrials)) Ntrials_plus = c(rep(1, nB), Ntrials)else {Ntrials =Ntrials_plus = NULL}
   datalist$y =yplus
 
 
@@ -98,20 +105,20 @@ contr.comp = inla.set.control.compute.default()
 contr.comp$dic = TRUE
 mod.P = NULL
 
-if (is.null(weights)) {
+if (missing(weights)) {
   if (family %in% c("binomial","betabinomial")){
-  mod.P = inla(formula.P, family = family, Ntrials = Ntrials_plus, data = datalist, 
+  mod.P = inla(formula.P, family = family, Ntrials = Ntrials_plus, data = datalist, offset = offset,
         control.predictor = list(A = A.matrix, compute = TRUE, quantiles = q, link = NULL), 
                 control.compute = contr.comp,
                 lincomb = lc.grid)
   } else if (family %in% c("gaussian","t","lognormal")){
-    mod.P = inla(formula.P, family = family, data = datalist, 
+    mod.P = inla(formula.P, family = family, data = datalist, offset = offset,
                  control.predictor = list(A = A.matrix, compute = TRUE, quantiles = q, link = NULL), 
                  control.family = list(hyper = list(prec = prior.observation.precision)),
                  control.compute = contr.comp,
                  lincomb = lc.grid)
   } else { 
-  mod.P = inla(formula.P, family = family, data = datalist, 
+  mod.P = inla(formula.P, family = family, data = datalist, offset = offset,
                control.predictor = list(A = A.matrix, compute = TRUE, quantiles = q, link = NULL), 
                control.compute = contr.comp,
                lincomb = lc.grid) 
@@ -119,18 +126,18 @@ if (is.null(weights)) {
 } else { 
   inla.setOption(enable.inla.argument.weights=TRUE)
   if (family %in% c("binomial","betabinomial")){
-    mod.P = inla(formula.P, family = family, Ntrials = Ntrials_plus, data = datalist, 
+    mod.P = inla(formula.P, family = family, Ntrials = Ntrials_plus, data = datalist, offset = offset,
                  control.predictor = list(A = A.matrix, compute = TRUE, quantiles = q, link = NULL), 
                  control.compute = contr.comp,
                  lincomb = lc.grid)
   } else if (family %in% c("gaussian","t","lognormal")){
-    mod.P = inla(formula.P, family = family, data = datalist, weights= weights,
+    mod.P = inla(formula.P, family = family, data = datalist, weights= weights, offset = offset,
                  control.predictor = list(A = A.matrix, compute = TRUE, quantiles = q, link = NULL), 
                  control.family = list(hyper = list(prec = prior.observation.precision)),
                  control.compute = contr.comp,
                  lincomb = lc.grid)
   } else { 
-    mod.P = inla(formula.P, family = family, data = datalist, weights= weights,
+    mod.P = inla(formula.P, family = family, data = datalist, weights= weights, offset = offset,
                  control.predictor = list(A = A.matrix, compute = TRUE, quantiles = q, link = NULL), 
                  control.compute = contr.comp,
                  lincomb = lc.grid) 
