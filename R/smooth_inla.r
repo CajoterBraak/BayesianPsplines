@@ -1,15 +1,17 @@
 #' @title Bayesian P-splines and GAMs using INLA
 #'
 #' @description
-#' \code{smooth_inla} Smooths data y in a data frame with respect to the
-#' zero, one or more predictors with or without an additional random group factor
+#' \code{smooth_inla} smooths data y in a data frame with respect to the
+#' zero, one or more predictors with or without an additional random group factor.
 #'   
 #'
-#' @details   aha
+#' @details   \code{smooth_inla} is a wrapper that uses INLA for the calculations. see \code{\link[INLA]{inla}}
+#' The predictors are transformed into B-splines and fitted using a penalty matrix tau*P 
+#' with P =D\'D with D differences of \code{diff.order}.
 #' @param data A data frame with columns y [group] x1 x2 ... , all numeric except
 #' group which is a factor and is optional. The response y should always be the first 
 #' column, and, if present, group second. All further vectors are used a predictors
-#' in a GAM. 
+#' in a GAM. Response and predictors can have user-defined names, but the grouping factor must have name \'group\'
 #' @param Ntrials Number of binomial trials with same length as y, if family is binomial
 #' @param family The family argument passed to INLA, see \code{\link[INLA]{inla}} 
 #' @param hyperB A list of hyperparameter for each of the predictors
