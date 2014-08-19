@@ -2,7 +2,7 @@
 # for smoooth_inla.r in real work
 # author: Cajo.terBraak@wur.nl 
 # copyright: CC-BY (Creative Commons Attribution 3.0 Netherlands)
-smooth_inla0 <- function(x,y, Ntrials=NULL, family, hyperB = list(prec = list(prior = "loggamma", param = c(1, 0.01))),    
+smooth_inla0 <- function(x,y, Ntrials, offset, family, hyperB = list(prec = list(prior = "loggamma", param = c(1, 0.01))),    
           xrange=  c(min(x),max(x)), diff.order = 2, ngrid = 100, nseg = 20, degree = 3, q = c(0.05, 0.5, 0.95) ){
   # tutorial code showing how to fit a single spline, not using an intercept
   # Prepare basis and penalty matrix
@@ -12,19 +12,22 @@ smooth_inla0 <- function(x,y, Ntrials=NULL, family, hyperB = list(prec = list(pr
   P = t(D) %*% D
   Bplus = rBind(Diagonal(nb), B)
   yplus = c(rep(NA, nb), y)
-  if (!is.null(Ntrials)) Ntrials_plus = c(rep(1, nb), Ntrials)
+  if (!missing(Ntrials)) Ntrials_plus = c(rep(1, nb), Ntrials) else Ntrials_plus = NULL
+  if (!missing(offset)) offset_plus = c(rep(0, nb), offset) else offset_plus = NULL
+  
   x_grid = seq(xrange[1], xrange[2], length = ngrid)
   B_grid = bbase(x_grid, xrange[1], xrange[2], nseg, degree)
   # set up INLA call using the A-matrix approach
   formula.P = y ~ -1 + f(id.b, model="generic", Cmatrix = P, constr = FALSE, hyper= hyperB)
   datalist = list(y = yplus, id.b = 1:nb)
   lc.grid = inla.make.lincombs(Predictor = B_grid)
-  mod.P = inla(formula.P,  Ntrials = Ntrials_plus, family = family, data = datalist, control.predictor = list(A = Bplus, compute = TRUE, quantiles = q), lincomb = lc.grid)
+  mod.P = inla(formula.P,  Ntrials = Ntrials_plus, offset = offset_plus,family = family, data = datalist, control.predictor = list(A = Bplus, compute = TRUE, quantiles = q), lincomb = lc.grid)
+#  mod.P = inla(formula.P, family = family, data = datalist, control.predictor = list(A = Bplus, compute = TRUE, quantiles = q), lincomb = lc.grid)
   Pred = mod.P$summary.lincomb.derived
   list(model_inla = mod.P, pred = Pred, x_grid = x_grid, B_grid=B_grid)
 }
 
-smooth_inla1 <- function(x,y, Ntrials=NULL, family, hyperB = list(prec = list(prior = "loggamma", param = c(1, 0.01))), 
+smooth_inla1 <- function(x,y, Ntrials, offset, family, hyperB = list(prec = list(prior = "loggamma", param = c(1, 0.01))), 
       xrange=  c(min(x),max(x)), diff.order = 2, ngrid = 100, nseg = 20, degree = 3, q = c(0.05, 0.5, 0.95) ){
 
   # tutorial code showing how to fit a single spline, using an intercept 
@@ -40,7 +43,8 @@ A = Matrix::cbind2(1,B)
 nB = ncol(A)
 Aplus = rBind(Diagonal(nB), A) # Aplus: to allow predictions with credible regions via B_grid to work
 yplus = c(rep(NA, nB), y)
-if (!is.null(Ntrials)) Ntrials_plus = c(rep(1, nB), Ntrials)
+if (!missing(Ntrials)) Ntrials_plus = c(rep(1, nB), Ntrials) else Ntrials_plus = NULL
+if (!missing(offset)) offset_plus = c(rep(0, nB), offset) else offset_plus = NULL
 datalist = list(y= yplus, idx0 = c(1,rep(NA,nb)), idx1 = c(NA, 1:nb))
 
 # set up an equispaced grid for making prediction 
@@ -57,12 +61,12 @@ formula.P = y ~ -1 +
   f(idx0,  model="iid", hyper = hyper.fixed, constr = FALSE) + # intercept
   f(idx1, model="generic", Cmatrix = P, constr = TRUE,  hyper = hyperB)
 lc.grid = inla.make.lincombs(Predictor = B_grid)
-mod.P = inla(formula.P,  Ntrials = Ntrials_plus, family = family, data = datalist, control.predictor = list(A = Aplus, compute = TRUE, quantiles = q), lincomb = lc.grid)
+mod.P = inla(formula.P,  Ntrials = Ntrials_plus, offset = offset_plus, family = family, data = datalist, control.predictor = list(A = Aplus, compute = TRUE, quantiles = q), lincomb = lc.grid)
 Pred = mod.P$summary.lincomb.derived
 list(model_inla = mod.P, pred = Pred, x_grid = x_grid, B_grid=B_grid)
 }
 
-smooth_inla2 <- function(x,y, Ntrials=NULL, family, hyperB = list(prec = list(prior = "loggamma", param = c(1, 0.01))), 
+smooth_inla2 <- function(x,y, Ntrials, offset, family, hyperB = list(prec = list(prior = "loggamma", param = c(1, 0.01))), 
                          xrange=  c(min(x),max(x)), diff.order = 2, ngrid = 100, nseg = 20, degree = 3, q = c(0.05, 0.5, 0.95) ){
   
   # tutorial code showing how to fit a single spline, using an intercept and linear term for x
@@ -78,7 +82,8 @@ smooth_inla2 <- function(x,y, Ntrials=NULL, family, hyperB = list(prec = list(pr
   nB = ncol(A)
   Aplus = rBind(Diagonal(nB), A) # Aplus: to allow predictions with credible regions via B_grid to work
   yplus = c(rep(NA, nB), y)
-  if (!is.null(Ntrials)) Ntrials_plus = c(rep(1, nB), Ntrials)
+  if (!missing(Ntrials)) Ntrials_plus = c(rep(1, nB), Ntrials) else Ntrials_plus = NULL
+  if (!missing(offset)) offset_plus = c(rep(0, nB), offset) else offset_plus = NULL
   datalist = list(y= yplus, idx0 = c(1:2,rep(NA,nb)), idx1 = c(NA, NA, 1:nb))
   
   # set up an equispaced grid for making prediction 
@@ -97,12 +102,12 @@ smooth_inla2 <- function(x,y, Ntrials=NULL, family, hyperB = list(prec = list(pr
     f(idx0,  model="iid", hyper = hyper.fixed, constr = FALSE) + # intercept
     f(idx1, model="generic", Cmatrix = P, constr = TRUE,  hyper = hyperB)
   lc.grid = inla.make.lincombs(Predictor = B_grid)
-  mod.P = inla(formula.P,  Ntrials = Ntrials_plus, family = family, data = datalist, control.predictor = list(A = Aplus, compute = TRUE, quantiles = q), lincomb = lc.grid)
+  mod.P = inla(formula.P,  Ntrials = Ntrials_plus,offset = offset_plus, family = family, data = datalist, control.predictor = list(A = Aplus, compute = TRUE, quantiles = q), lincomb = lc.grid)
   Pred = mod.P$summary.lincomb.derived
   list(model_inla = mod.P, pred = Pred, x_grid = x_grid, B_grid=B_grid)
 }
 
-smooth_inla3 <- function(x,group, y, Ntrials, family, hyperB = list(prec = list(prior = "loggamma", param = c(1, 0.01))), 
+smooth_inla3 <- function(x,group, y, Ntrials, offset, family, hyperB = list(prec = list(prior = "loggamma", param = c(1, 0.01))), 
                          xrange=  c(min(x),max(x)), diff.order = 2, ngrid = 100, nseg = 20, degree = 3, q = c(0.05, 0.5, 0.95), grid_with_x = TRUE){
   # tutorial code showing how to fit a single spline, using an intercept and 
   # an extra grouping factor
@@ -119,7 +124,8 @@ smooth_inla3 <- function(x,group, y, Ntrials, family, hyperB = list(prec = list(
   nB = ncol(A)
   Aplus = rBind(Diagonal(nB), A) # Aplus: to allow predictions with credible regions via B_grid to work
   yplus = c(rep(NA, nB), y)
-  if (!missing(Ntrials)) Ntrials_plus = c(rep(1, nB), Ntrials)
+  if (!missing(Ntrials)) Ntrials_plus = c(rep(1, nB), Ntrials) else Ntrials_plus = NULL
+  if (!missing(offset)) offset_plus = c(rep(0, nB), offset) else offset_plus = NULL
   datalist = list(y= yplus, idx0 = c(1,rep(NA,nb+ng)), idx1 = c(NA, 1:nb, rep(NA,ng)),
                   idg = c(rep(NA,(nb+1)), rep(1:ng)))
   
@@ -137,7 +143,7 @@ smooth_inla3 <- function(x,group, y, Ntrials, family, hyperB = list(prec = list(
     f(idx1, model="generic", Cmatrix = basisP$P, constr = TRUE,  hyper = hyperB) +
     f(idg, model = "iid", constr = TRUE, hyper = hyper.group) 
   lc.grid = inla.make.lincombs(Predictor = B_grid)
-  mod.P = inla(formula.P,  Ntrials = Ntrials_plus, family = family, data = datalist, control.predictor = list(A = Aplus, compute = TRUE, quantiles = q), lincomb = lc.grid)
+  mod.P = inla(formula.P,  Ntrials = Ntrials_plus,offset = offset_plus, family = family, data = datalist, control.predictor = list(A = Aplus, compute = TRUE, quantiles = q), lincomb = lc.grid)
   Pred = mod.P$summary.lincomb.derived
   fitted = mod.P$summary.fitted.values[nB + seq_along(y),]
   list(model_inla = mod.P, fitted = fitted, pred = Pred, x_grid = basisP$x_grid, B_grid=B_grid, indices = basisP$indices)
@@ -148,8 +154,6 @@ prepare_basis_P0 <- function(x, xrange= c(0,1), ngrid = 100, diff.order = 2, nse
   #  Bplus_create adds a diagonal matrix in front of B (for A matrix)
   #  Bgrid_with_x makes a grid of c(x, seq(min,max,length = ngrid)
   B = bbase(x, xrange[1], xrange[2], nseg, degree)
-  B[abs(B)<eps] = 0
-  B = Matrix(B)
   nb = ncol(B)
   D = diff(diag(nb), diff = diff.order)
   P = t(D) %*% D

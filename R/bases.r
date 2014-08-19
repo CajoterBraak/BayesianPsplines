@@ -11,6 +11,7 @@ bbase <- function(x, xl = min(x), xr = max(x), nseg = 10, deg = 3, eps = 1e-5){
     n <- dim(P)[2]
     D <- diff(diag(n), diff = deg + 1) / (gamma(deg + 1) * dx ^ deg)
     B <- (-1) ^ (deg + 1) * P %*% t(D)
-    B[abs(B)<eps] = 0
+    if (deg==0)B[1,1]=1
+    B[B<eps] = 0
     Matrix(B)
 }

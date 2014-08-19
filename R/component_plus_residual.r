@@ -13,7 +13,7 @@ component_plus_residual = function(rs, k=1, transform = function(x){x}, backtran
   y_pred_sd = rs$pred[irange,"sd"] # sd on transformed scale
   # points(x, 100*y/Ntrials) # raw data
   # from residuals on the transformed scale
-  yhat = transform(rs$fitted[,"0.5quant"])
+  yhat = rs$fitted[,"0.5quant"]
   if (is.null(rs$Ntrials)) observed = transform(rs$y) else {
     observed = transform(rs$y/rs$Ntrials) # on transformed scale
   }
@@ -34,6 +34,6 @@ component_plus_residual = function(rs, k=1, transform = function(x){x}, backtran
   }
   pred.out = data.frame(x_grid,mean=rs$pred[irange,"mean"] , sd=rs$pred[irange,"sd"],y_lo, y_pred, y_hi) # on transformed scale
   names(pred.out)[-1]= names(rs$pred)[-c(1,7,8)] 
-  data.out = data.frame(x=rs$x[,k],observed,yhat,residual,componentplus) # on transformed scale
+  data.out = data.frame(x=rs$x[,k],observed,yhat,residual,componentplus,rs$fitted) # on transformed scale
   list(pred.grid = pred.out, pred.data = data.out)
 }
