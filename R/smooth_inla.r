@@ -38,7 +38,7 @@ smooth_inla <- function(data,  Ntrials, family = "gaussian", hyperB, weights, of
   if (is.null(data$group)) Group = NULL else Group = model.matrix(~-1+group, data)
   Amlist = list(intercept = matrix(1, nrow = length(data$y), ncol = 1))
   for (k in seq_len(ncol(dataX))) {
-    if (missing(xrange)) xrange.k = c(min(dataX[[k]]),max(dataX[[k]])) else 
+    if (missing(xrange)) xrange.k = default_range(dataX[[k]]) else 
       if (is.matrix(xrange)) xrange.k = xrange[k,] else xrange.k = xrange
     basisP[[k]] = prepare_basis_P(dataX[[k]], xrange.k,diff.order[k], ngrid, nseg, degree, grid_with_x=grid_with_x)     
     Amlist[[k+1]] = basisP[[k]]$B

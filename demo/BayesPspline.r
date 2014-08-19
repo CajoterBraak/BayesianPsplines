@@ -24,19 +24,18 @@ transform <- function(x){x = ifelse(abs(x)<0.025,0.025,x);x = ifelse(abs(x-1)<0.
 # backtransform from logit scale to a percentage scale
 backtransform <- function(x){100*ilogit(x)}
 ylim =c(-5,105)
-xrange= c(-1.6, 0.45) # depth ##range of predictor, a bit extended
 x= Data$wl; y = Data$y; Ntrials = Data$Ntrials; group = Data$transect
 
 hyperB = list(prec = list(prior = "loggamma", param = c(1, 0.001)))
 
 rs0 = NULL
 #rs0 = smooth_inla0(x,y, Ntrials, family = fam, hyperB= hyperB, xrange= xrange, diff.order = 3)
-rs0 = BayesianPsplines:::smooth_inla0(x,y, Ntrials, family = fam, hyperB= hyperB, xrange= xrange, diff.order = 3)
+rs0 = BayesianPsplines:::smooth_inla0(x,y, Ntrials, family = fam, hyperB= hyperB, diff.order = 3)
 
 rs1 = NULL  
-rs1 = BayesianPsplines:::smooth_inla1(x,y, Ntrials, family = fam, hyperB= hyperB, xrange= xrange, diff.order = 3)
+rs1 = BayesianPsplines:::smooth_inla1(x,y, Ntrials, family = fam, hyperB= hyperB, diff.order = 3)
 rs2 = NULL  
-rs2 = BayesianPsplines:::smooth_inla2(x,y, Ntrials, family = fam, hyperB= hyperB, xrange= xrange, diff.order = 3)
+rs2 = BayesianPsplines:::smooth_inla2(x,y, Ntrials, family = fam, hyperB= hyperB, diff.order = 3)
 
 
 pred0 = rs0$pred
@@ -70,7 +69,7 @@ Gumbel = paste("expression:logdens = -0.5*log_precision-", lambda, "*exp(-0.5*lo
 print(Gumbel)
 hyperGumbel = list(prec = list(prior = Gumbel, param = numeric(0)))
 rs3 = NULL  
-rs3 = BayesianPsplines:::smooth_inla3(x,group, y, Ntrials, family = fam, hyperB= hyperGumbel, xrange= xrange, diff.order = 3)
+rs3 = BayesianPsplines:::smooth_inla3(x,group, y, Ntrials, family = fam, hyperB= hyperGumbel, diff.order = 3)
 # intercept
 intercept = rs3$pred[1,]
 Pred.rw = rs3$pred[-1,]
@@ -101,20 +100,16 @@ points(x, backtransform(componentplus) ) # component-plus-residual plot
 
 mydata = data.frame(y = Data$y, group = Data$transect, x = Data$wl)
 Ntrials = Data$Ntrials
-xrange = rbind(xrange)
 rs = NULL  
-rs = smooth_inla(mydata, Ntrials, family = fam, hyperB= hyperGumbel, xrange= xrange, diff.order = 3)
+rs = smooth_inla(mydata, Ntrials, family = fam, hyperB= hyperGumbel, diff.order = 3)
 # intercept
 intercept = rs$pred[1,]
 k = 1 # first predictor
 pred = component_plus_residual(rs, k, transform, backtransform,  mplot = TRUE, ylim= ylim, ylab= my.ylab,xlab = my.xlab , main = species)
 
 mydata = data.frame(y = Data$y, group = Data$transect, x1 = Data$wl, x2 = Data$log_ntot)
-xrange = rbind(xrange)
-xrange = rbind(xrange,  c(-3.4, 3.2)) # log(ntot) 
-
 rs = NULL  
-rs = smooth_inla(mydata, Ntrials, family = fam, hyperB= hyperB, xrange= xrange, diff.order = c(3,3))
+rs = smooth_inla(mydata, Ntrials, family = fam, hyperB= hyperB, diff.order = c(3,3))
 # intercept
 intercept = rs$pred[1,]
 my.xlab = c("water level (m)" ,"ln ntot")

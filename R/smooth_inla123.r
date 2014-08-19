@@ -3,9 +3,10 @@
 # author: Cajo.terBraak@wur.nl 
 # copyright: CC-BY (Creative Commons Attribution 3.0 Netherlands)
 smooth_inla0 <- function(x,y, Ntrials, offset, family, hyperB = list(prec = list(prior = "loggamma", param = c(1, 0.01))),    
-          xrange=  c(min(x),max(x)), diff.order = 2, ngrid = 100, nseg = 20, degree = 3, q = c(0.05, 0.5, 0.95) ){
+          xrange, diff.order = 2, ngrid = 100, nseg = 20, degree = 3, q = c(0.05, 0.5, 0.95) ){
   # tutorial code showing how to fit a single spline, not using an intercept
   # Prepare basis and penalty matrix
+  if (missing(xrange))xrange = default_range(x)
   B = bbase(x, xrange[1], xrange[2], nseg, degree)
   nb = ncol(B)
   D = diff(diag(nb), diff = diff.order)
@@ -28,10 +29,11 @@ smooth_inla0 <- function(x,y, Ntrials, offset, family, hyperB = list(prec = list
 }
 
 smooth_inla1 <- function(x,y, Ntrials, offset, family, hyperB = list(prec = list(prior = "loggamma", param = c(1, 0.01))), 
-      xrange=  c(min(x),max(x)), diff.order = 2, ngrid = 100, nseg = 20, degree = 3, q = c(0.05, 0.5, 0.95) ){
+      xrange, diff.order = 2, ngrid = 100, nseg = 20, degree = 3, q = c(0.05, 0.5, 0.95) ){
 
   # tutorial code showing how to fit a single spline, using an intercept 
   # Prepare basis and penalty matrix
+if (missing(xrange))xrange = default_range(x)
 B = bbase(x, xrange[1], xrange[2], nseg, degree)
 nb = ncol(B)
 D = diff(diag(nb), diff = diff.order)
@@ -67,10 +69,11 @@ list(model_inla = mod.P, pred = Pred, x_grid = x_grid, B_grid=B_grid)
 }
 
 smooth_inla2 <- function(x,y, Ntrials, offset, family, hyperB = list(prec = list(prior = "loggamma", param = c(1, 0.01))), 
-                         xrange=  c(min(x),max(x)), diff.order = 2, ngrid = 100, nseg = 20, degree = 3, q = c(0.05, 0.5, 0.95) ){
+                         xrange, diff.order = 2, ngrid = 100, nseg = 20, degree = 3, q = c(0.05, 0.5, 0.95) ){
   
   # tutorial code showing how to fit a single spline, using an intercept and linear term for x
   # Prepare basis and penalty matrix
+  if (missing(xrange)) xrange = default_range(x)
   B = bbase(x, xrange[1], xrange[2], nseg, degree)
   nb = ncol(B)
   D = diff(diag(nb), diff = diff.order)
@@ -108,10 +111,11 @@ smooth_inla2 <- function(x,y, Ntrials, offset, family, hyperB = list(prec = list
 }
 
 smooth_inla3 <- function(x,group, y, Ntrials, offset, family, hyperB = list(prec = list(prior = "loggamma", param = c(1, 0.01))), 
-                         xrange=  c(min(x),max(x)), diff.order = 2, ngrid = 100, nseg = 20, degree = 3, q = c(0.05, 0.5, 0.95), grid_with_x = TRUE){
+                         xrange, diff.order = 2, ngrid = 100, nseg = 20, degree = 3, q = c(0.05, 0.5, 0.95), grid_with_x = TRUE){
   # tutorial code showing how to fit a single spline, using an intercept and 
   # an extra grouping factor
   # Prepare basis and penalty matrix
+  if (missing(xrange))xrange = default_range(x)
   basisP = prepare_basis_P0(x, xrange, ngrid, diff.order, nseg, degree, grid_with_x=grid_with_x)
   nb = basisP$nb
   # add intercept as first column
@@ -169,3 +173,13 @@ prepare_basis_P0 <- function(x, xrange= c(0,1), ngrid = 100, diff.order = 2, nse
   list(x = x, B = B, P = P, nb = nb, x_grid = x_grid, B_grid = B_grid, indices = indices)
 }
 
+default_range <- function(x, extend = 0.2, bounds){
+  rr =range(x)
+  dx = (rr[2]-rr[1])*extend
+  xrange = c(rr[1]-dx, rr[2] +dx)
+  if (!missing(bounds)){
+    if(!is.na(bounds[1])) if (xrange[1]<bounds[1]) xrange[1]= bounds[1]
+    if(!is.na(bounds[2])) if (xrange[2]>bounds[2]) xrange[2]= bounds[2]
+  }
+  xrange
+}
