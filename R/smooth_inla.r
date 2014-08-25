@@ -62,8 +62,8 @@ smooth_inla <- function(data,  Ntrials, family = "gaussian", hyperB, weights, of
 
   if (!missing(offset)) {
     if(missing(offset_par)) offset_par = mean(offset)
-    offset = c(rep(offset_par,nB),offset)
-  } else offset = NULL
+    offset_plus = c(rep(offset_par,nB),offset)
+  } else offset_plus = NULL
   if (!missing(Ntrials)) Ntrials_plus = c(rep(1, nB), Ntrials)else {Ntrials =Ntrials_plus = NULL}
   datalist$y =yplus
 
@@ -109,18 +109,18 @@ mod.P = NULL
 
 if (missing(weights)) {
   if (family %in% c("binomial","betabinomial")){
-  mod.P = inla(formula.P, family = family, Ntrials = Ntrials_plus, data = datalist, offset = offset,
+  mod.P = inla(formula.P, family = family, Ntrials = Ntrials_plus, data = datalist, offset = offset_plus,
         control.predictor = list(A = A.matrix, compute = TRUE, quantiles = q, link = NULL), 
                 control.compute = contr.comp,
                 lincomb = lc.grid)
   } else if (family %in% c("gaussian","t","lognormal")){
-    mod.P = inla(formula.P, family = family, data = datalist, offset = offset,
+    mod.P = inla(formula.P, family = family, data = datalist, offset = offset_plus,
                  control.predictor = list(A = A.matrix, compute = TRUE, quantiles = q, link = NULL), 
                  control.family = list(hyper = list(prec = prior.observation.precision)),
                  control.compute = contr.comp,
                  lincomb = lc.grid)
   } else { 
-  mod.P = inla(formula.P, family = family, data = datalist, offset = offset,
+  mod.P = inla(formula.P, family = family, data = datalist, offset = offset_plus,
                control.predictor = list(A = A.matrix, compute = TRUE, quantiles = q, link = NULL), 
                control.compute = contr.comp,
                lincomb = lc.grid) 
@@ -128,18 +128,18 @@ if (missing(weights)) {
 } else { 
   inla.setOption(enable.inla.argument.weights=TRUE)
   if (family %in% c("binomial","betabinomial")){
-    mod.P = inla(formula.P, family = family, Ntrials = Ntrials_plus, data = datalist, offset = offset,
+    mod.P = inla(formula.P, family = family, Ntrials = Ntrials_plus, data = datalist, offset = offset_plus,
                  control.predictor = list(A = A.matrix, compute = TRUE, quantiles = q, link = NULL), 
                  control.compute = contr.comp,
                  lincomb = lc.grid)
   } else if (family %in% c("gaussian","t","lognormal")){
-    mod.P = inla(formula.P, family = family, data = datalist, weights= weights, offset = offset,
+    mod.P = inla(formula.P, family = family, data = datalist, weights= weights, offset = offset_plus,
                  control.predictor = list(A = A.matrix, compute = TRUE, quantiles = q, link = NULL), 
                  control.family = list(hyper = list(prec = prior.observation.precision)),
                  control.compute = contr.comp,
                  lincomb = lc.grid)
   } else { 
-    mod.P = inla(formula.P, family = family, data = datalist, weights= weights, offset = offset,
+    mod.P = inla(formula.P, family = family, data = datalist, weights= weights, offset = offset_plus,
                  control.predictor = list(A = A.matrix, compute = TRUE, quantiles = q, link = NULL), 
                  control.compute = contr.comp,
                  lincomb = lc.grid) 
@@ -158,7 +158,7 @@ fitted = mod.P$summary.linear.predictor[nB + (seq_len(nrow(dataX))),]
 rownames(fitted)= rownames(data)
 
 
-list(model_inla = mod.P, x = dataX, y=data$y, Ntrials=Ntrials, group= data$group, intercept = intercept, fitted = fitted, pred = Pred.rw, x_grid = x_grid, B_grid=B_grid, indices_B_grid = indices)
+list(model_inla = mod.P, x = dataX, y=data$y, Ntrials=Ntrials, offset = offset, group= data$group, intercept = intercept, fitted = fitted, pred = Pred.rw, x_grid = x_grid, B_grid=B_grid, indices_B_grid = indices)
 }
 
 
