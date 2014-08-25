@@ -75,7 +75,7 @@ for (k in seq_len(ncol(dataX))) {
      nb =  basisP[[k]]$nb          
      B_grid = cBind(B_grid,matrix(0,nrow = nrow(B_grid), ncol = nb ))
      B_grid = rBind(B_grid, cBind(matrix(0,nrow = ngridn, ncol = ncol(B_grid)-nb ), basisP[[k]]$B_grid) )
-     indices[[k]] = sapply(basisP[[k]]$indices_B_grid, function(x){x+ngridn*(k-1) + 1 })
+     indices[[k]] = sapply(basisP[[k]]$indices_B_grid, function(x){x+ngridn*(k-1) + 1 }, simplify = FALSE)
 }
 B_grid[,1]= 1 # intercept added to all predictions
 #
