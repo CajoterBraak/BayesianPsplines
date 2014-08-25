@@ -40,6 +40,8 @@ component_plus_residual = function(rs, k=1, transform = function(x){x}, backtran
   } # mplot
   pred.out = data.frame(x_grid,mean=rs$pred[irange,"mean"] , sd=rs$pred[irange,"sd"],y_lo, y_pred, y_hi) # on transformed scale
   names(pred.out)[-1]= names(rs$pred)[-c(1,7,8)] 
-  data.out = data.frame(x=rs$x[,k],y = rs$y, Ntrials = rs$Ntrials, group = rs$group, observed.tr, yhat,residual,componentplus,rs$fitted) # on transformed scale
+  data.out = data.frame(x=rs$x[,k],y = rs$y, observed.tr, yhat,residual,componentplus,rs$fitted) # on transformed scale
+  data.out$Ntrials = rs$Ntrials
+  data.out$group = rs$group
   list(pred.grid = pred.out, pred.data = data.out)
 }
