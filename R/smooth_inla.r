@@ -155,6 +155,7 @@ x_grid = NULL
 for (k in seq_along(basisP))x_grid = cbind(x_grid, basisP[[k]]$x_grid)
 #fitted = mod.P$summary.fitted.values[nB + (seq_len(nrow(dataX))),]
 fitted = mod.P$summary.linear.predictor[nB + (seq_len(nrow(dataX))),]
+rownames(fitted)= rownames(data)
 
 
 list(model_inla = mod.P, x = dataX, y=data$y, Ntrials=Ntrials, group= data$group, intercept = intercept, fitted = fitted, pred = Pred.rw, x_grid = x_grid, B_grid=B_grid, indices_B_grid = indices)

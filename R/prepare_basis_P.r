@@ -16,7 +16,7 @@ prepare_basis_P <- function(x, xrange = c(min(x),max(x)), diff.order = 2, ngrid 
   indices = list(grid = seq_len(ngrid))
   if (grid_with_x) { 
     B_grid = rBind(B_grid,B)
-    indices$x = ngrid+seq_along(x)
+    indices$x = ngrid+seq_along(x))
   }
   list(x = x, B = B, P = P, diff.order = diff.order, nb = nb, x_grid = x_grid, B_grid = B_grid, indices_B_grid = indices, grid_with_x = grid_with_x, xrange =xrange, nseg = nseg, degree= degree)
 }
