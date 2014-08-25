@@ -105,7 +105,9 @@ rs = smooth_inla(mydata, Ntrials, family = fam, hyperB= hyperGumbel, diff.order 
 # intercept
 intercept = rs$pred[1,]
 k = 1 # first predictor
-pred = component_plus_residual(rs, k, transform, backtransform,  mplot = TRUE, ylim= ylim, ylab= my.ylab,xlab = my.xlab , main = species)
+pred = component_plus_residual(rs, k, transform, backtransform, ylim= ylim, ylab= my.ylab,xlab = my.xlab , main = species)
+## plot data points as percentages by
+#pred = component_plus_residual(rs, k, transform, backtransform,  mplot = 1, yscale=100, ylim= ylim, ylab= my.ylab,xlab = my.xlab , main = species)
 
 mydata = data.frame(y = Data$y, group = Data$transect, x1 = Data$wl, x2 = Data$log_ntot)
 rs = NULL  
@@ -115,7 +117,7 @@ intercept = rs$pred[1,]
 my.xlab = c("water level (m)" ,"ln ntot")
 par(mfrow=c(1,2))
 k = 1 # first predictor
-pred1 = component_plus_residual(rs, k,transform, backtransform, mplot = TRUE, ylim= ylim, ylab= my.ylab,xlab = my.xlab[1], main = species)
+pred1 = component_plus_residual(rs, k,transform, backtransform, ylim= ylim, ylab= my.ylab,xlab = my.xlab[1], main = species)
 k = 2 # second predictor
-pred2 = component_plus_residual(rs, k,transform, backtransform, mplot = TRUE, ylim= ylim, ylab= my.ylab,xlab = my.xlab[2], main = species)
+pred2 = component_plus_residual(rs, k,transform, backtransform, ylim= ylim, ylab= my.ylab,xlab = my.xlab[2], main = species)
 
