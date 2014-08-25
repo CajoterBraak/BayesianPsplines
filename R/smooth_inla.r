@@ -24,7 +24,7 @@
 #' @examples Example program in BayesPspline.r 
 #' @export
 
-smooth_inla <- function(data,  Ntrials, fixed.design.matrix, family = "gaussian", hyperB, weights, offset,
+smooth_inla <- function(data,  Ntrials, family = "gaussian", hyperB, weights, offset,
      offset_par, xrange, ngrid = 100, nseg = 20 , degree = 3, 
     diff.order = rep(2,ncol(data)), grid_with_x = TRUE, q = c(0.05, 0.5, 0.95), verbose = FALSE ){
 # smooth_inla assumes that data consists of the columns (in this order)
@@ -36,9 +36,7 @@ smooth_inla <- function(data,  Ntrials, fixed.design.matrix, family = "gaussian"
   basisP = list()
   if (is.null(data$group)) dataX = data[,-1, drop = FALSE] else dataX = data[,-c(1,2), drop = FALSE]
   if (is.null(data$group)) Group = NULL else Group = model.matrix(~-1+group, data)
-  X.fixed = matrix(1, nrow = length(data$y), ncol = 1)
-  if(!missing(fixed.design.matrix)) X.fixed = cbind(X.fixed, fixed.design.matrix)
-  Amlist = list(intercept = X.fixed)
+  Amlist = list(intercept = matrix(1, nrow = length(data$y), ncol = 1))
   for (k in seq_len(ncol(dataX))) {
     if (missing(xrange)) xrange.k = default_range(dataX[[k]]) else 
       if (is.matrix(xrange)) xrange.k = xrange[k,] else xrange.k = xrange
