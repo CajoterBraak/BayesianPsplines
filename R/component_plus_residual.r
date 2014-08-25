@@ -36,7 +36,7 @@ component_plus_residual = function(rs, k=1, transform = function(x){x}, backtran
     if (mplot == 2){
       points(rs$x[,k], backtransform(componentplus),... ) # component-plus-residual plot
       } else 
-      points(rs$x[,k],yscale*yy,... ) # simple plot if y~x 
+      points(rs$x[,k],yscale*yy,... ) # simple plot if mplot = 1 (useful if y~x)
   } # mplot
   pred.out = data.frame(x_grid,mean=rs$pred[irange,"mean"] , sd=rs$pred[irange,"sd"],y_lo, y_pred, y_hi) # on transformed scale
   names(pred.out)[-1]= names(rs$pred)[-c(1,7,8)] 
