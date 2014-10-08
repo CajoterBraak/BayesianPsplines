@@ -25,7 +25,7 @@
 #' @export
 
 smooth_inla <- function(data,  Ntrials, family = "gaussian", hyperB, weights, offset,
-     offset_par, xrange, ngrid = 100, nseg = 20 , degree = 3, 
+     offset_par, xrange, ngrid = 100, nseg = 20 , degree = rep(3,ncol(data)), 
     diff.order = rep(2,ncol(data)), grid_with_x = TRUE, q = c(0.05, 0.5, 0.95), verbose = FALSE ){
 # smooth_inla assumes that data consists of the columns (in this order)
 #  y and optionally a group factor
@@ -40,10 +40,11 @@ smooth_inla <- function(data,  Ntrials, family = "gaussian", hyperB, weights, of
   for (k in seq_len(ncol(dataX))) {
     if (missing(xrange)) xrange.k = extend_range(dataX[[k]]) else 
       if (is.matrix(xrange)) xrange.k = xrange[k,] else xrange.k = xrange
-    basisP[[k]] = prepare_basis_P(dataX[[k]], xrange.k,diff.order[k], ngrid, nseg, degree, grid_with_x=grid_with_x)     
+    basisP[[k]] = prepare_basis_P(dataX[[k]], xrange.k,diff.order[k], ngrid, nseg, degree[k], grid_with_x=grid_with_x)     
     Amlist[[k+1]] = basisP[[k]]$B
   }
   Amlist$Group = Group
+  if (length(hyperB)==1) hyperB = list(hyperB,hyperB,hyperB,hyperB,hyperB)
   pA = sapply(Amlist,ncol)
   names(pA)= names(Amlist)
   npar = sum(pA); n.pA = length(pA)
@@ -63,7 +64,7 @@ smooth_inla <- function(data,  Ntrials, family = "gaussian", hyperB, weights, of
   if (!missing(offset)) {
     if(missing(offset_par)) offset_par = mean(offset)
     offset_plus = c(rep(offset_par,nB),offset)
-  } else offset_plus = NULL
+  } else {offset = offset_plus = NULL}
   if (!missing(Ntrials)) Ntrials_plus = c(rep(1, nB), Ntrials)else {Ntrials =Ntrials_plus = NULL}
   datalist$y =yplus
 
@@ -93,7 +94,7 @@ prior.observation.precision = list(prior = "flat", param = numeric(0))
 # make formula
 formula.txt = paste(" formula.P = y ~ -1 + f(idx0,  model=\"iid\", hyper = hyper.fixed, constr = FALSE)") # intercept
 for (k in seq_len(ncol(dataX))) {
-  txt = paste("+ f(idx", k,", model=\"generic\", Cmatrix = basisP[[",k,"]]$P, constr = TRUE,  hyper = hyperB)", sep = "")
+  txt = paste("+ f(idx", k,", model=\"generic\", Cmatrix = basisP[[",k,"]]$P, constr = TRUE,  hyper = hyperB[[",k,"]])", sep = "")
   formula.txt= paste(formula.txt, txt,sep = "")
 }
 if (!is.null(data$group)) {
@@ -102,11 +103,12 @@ if (!is.null(data$group)) {
 }
 
 formula.P = as.formula(formula.txt)
+print(formula.P)
 
 contr.comp = inla.set.control.compute.default()
 contr.comp$dic = TRUE
 mod.P = NULL
-
+start = proc.time()[3]
 if (missing(weights)) {
   if (family %in% c("binomial","betabinomial")){
   mod.P = inla(formula.P, family = family, Ntrials = Ntrials_plus, data = datalist, offset = offset_plus,
@@ -145,7 +147,8 @@ if (missing(weights)) {
                  lincomb = lc.grid) 
   }       
 }
-
+end = proc.time()[3]
+time.P = end - start
 if (verbose) summary(mod.P)
 # get the default quantiles
 intercept = mod.P$summary.lincomb.derived[1,]
@@ -156,9 +159,10 @@ for (k in seq_along(basisP))x_grid = cbind(x_grid, basisP[[k]]$x_grid)
 #fitted = mod.P$summary.fitted.values[nB + (seq_len(nrow(dataX))),]
 fitted = mod.P$summary.linear.predictor[nB + (seq_len(nrow(dataX))),]
 rownames(fitted)= rownames(data)
+coef = mod.P$summary.linear.predictor[1:nB,] # inclusive intercept
+rownames(coef)= c("(Intercept)", 1:(nB-1))
 
-
-list(model_inla = mod.P, x = dataX, y=data$y, Ntrials=Ntrials, offset = offset, group= data$group, intercept = intercept, fitted = fitted, pred = Pred.rw, x_grid = x_grid, B_grid=B_grid, indices_B_grid = indices)
+list(model_inla = mod.P, x = dataX, y=data$y, Ntrials=Ntrials, offset = offset, group= data$group, intercept = intercept, coefficients = coef,fitted = fitted, pred = Pred.rw, x_grid = x_grid, B_grid=B_grid, indices_B_grid = indices, time = time.P)
 }
 
 

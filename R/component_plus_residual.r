@@ -27,14 +27,14 @@ component_plus_residual = function(rs, k=1, transform = function(x){x}, backtran
   }else componentplus = observed.tr  # or find closest x_grid to x and use that fit!
   if (!is.null(rs$offset)) { 
     componentplus = componentplus - rs$offset 
-    if (rs$model$".args"$family =="gaussian") yy = yy - rs$offset else yy = yy/exp(rs$offset)
+   # if (rs$model$".args"$family =="gaussian") yy = yy - rs$offset else yy = yy/exp(rs$offset)
   }
   
   if (mplot){
     # yy for simple plot
     if (mplot == 2) yyy = backtransform(componentplus) else yyy = yscale*yy
-    if (is.null(ylim)) {pmax = max( c(backtransform(y_hi),yyy))
-                        pmin = min( c(backtransform(y_lo),yyy))
+    if (is.null(ylim)) {pmax = max( c(backtransform(y_hi),yyy), na.rm = TRUE)
+                        pmin = min( c(backtransform(y_lo),yyy), na.rm = TRUE)
                         plim = c(pmin, pmax)} else plim = ylim
     plot(x_grid, backtransform(y_pred), type = "l", ylim = plim,  ...)
     lines(x_grid, backtransform(y_hi), lty="dashed")
