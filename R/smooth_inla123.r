@@ -10,20 +10,16 @@ smooth_inla0 <- function(x,y, Ntrials, offset, family, hyperB = list(prec = list
   B = bbase(x, xrange[1], xrange[2], nseg, degree)
   nb = ncol(B)
   D = diff(diag(nb), diff = diff.order)
-  P = t(D) %*% D
-  Bplus = rBind(Diagonal(nb), B)
-  yplus = c(rep(NA, nb), y)
-  if (!missing(Ntrials)) Ntrials_plus = c(rep(1, nb), Ntrials) else Ntrials_plus = NULL
-  if (!missing(offset)) offset_plus = c(rep(0, nb), offset) else offset_plus = NULL
-  
+  P = t(D) %*% D 
   x_grid = seq(xrange[1], xrange[2], length = ngrid)
   B_grid = bbase(x_grid, xrange[1], xrange[2], nseg, degree)
-  # set up INLA call using the A-matrix approach
+  # In the INLA A-matrix approach, the output is c(eta*, eta), so shift B_grid...
+  B_grid_plus =cBind(Matrix(0,nrow = nrow(B_grid), ncol = nrow(B)),B_grid)
+  
   formula.P = y ~ -1 + f(id.b, model="generic", Cmatrix = P, constr = FALSE, hyper= hyperB)
-  datalist = list(y = yplus, id.b = 1:nb)
-  lc.grid = inla.make.lincombs(Predictor = B_grid)
-  mod.P = inla(formula.P,  Ntrials = Ntrials_plus, offset = offset_plus,family = family, data = datalist, control.predictor = list(A = Bplus, compute = TRUE, quantiles = q), lincomb = lc.grid)
-#  mod.P = inla(formula.P, family = family, data = datalist, control.predictor = list(A = Bplus, compute = TRUE, quantiles = q), lincomb = lc.grid)
+  datalist = list(y = y, id.b = 1:nb)
+  lc.grid = inla.make.lincombs(Predictor = B_grid_plus)
+  mod.P = inla(formula.P,  Ntrials = Ntrials, offset = offset,family = family, data = datalist, control.predictor = list(A = B, compute = TRUE, quantiles = q), lincomb = lc.grid)
   Pred = mod.P$summary.lincomb.derived
   list(model_inla = mod.P, pred = Pred, x_grid = x_grid, B_grid=B_grid)
 }
@@ -42,12 +38,7 @@ P = t(D) %*% D
 A = Matrix::cbind2(1,B)
 # add ncol(A) at the top of A and to y (and Ntrials)
 # used for creating predictions
-nB = ncol(A)
-Aplus = rBind(Diagonal(nB), A) # Aplus: to allow predictions with credible regions via B_grid to work
-yplus = c(rep(NA, nB), y)
-if (!missing(Ntrials)) Ntrials_plus = c(rep(1, nB), Ntrials) else Ntrials_plus = NULL
-if (!missing(offset)) offset_plus = c(rep(0, nB), offset) else offset_plus = NULL
-datalist = list(y= yplus, idx0 = c(1,rep(NA,nb)), idx1 = c(NA, 1:nb))
+datalist = list(y= y, idx0 = c(1,rep(NA,nb)), idx1 = c(NA, 1:nb))
 
 # set up an equispaced grid for making prediction 
 x_grid = seq(xrange[1], xrange[2], length = ngrid)
@@ -56,14 +47,16 @@ B_grid = bbase(x_grid, xrange[1], xrange[2], nseg, degree)
 B_grid = Matrix::cbind2(1,B_grid)
 # add a row (1,0,0,0,....) for the intercept
 B_grid = Matrix(rBind(c(1, rep(0,nb)),B_grid))
+# In the INLA A-matrix approach, the output is c(eta*, eta), so shift B_grid...
+B_grid_plus =cBind(Matrix(0,nrow = nrow(B_grid), ncol = nrow(A)),B_grid)
 
 # set up INLA call using the A-matrix approach
 hyper.fixed = list(prec = list(initial = log(0.001), fixed=TRUE))
 formula.P = y ~ -1 +
   f(idx0,  model="iid", hyper = hyper.fixed, constr = FALSE) + # intercept
   f(idx1, model="generic", Cmatrix = P, constr = TRUE,  hyper = hyperB)
-lc.grid = inla.make.lincombs(Predictor = B_grid)
-mod.P = inla(formula.P,  Ntrials = Ntrials_plus, offset = offset_plus, family = family, data = datalist, control.predictor = list(A = Aplus, compute = TRUE, quantiles = q), lincomb = lc.grid)
+lc.grid = inla.make.lincombs(Predictor = B_grid_plus)
+mod.P = inla(formula.P,  Ntrials = Ntrials, offset = offset, family = family, data = datalist, control.predictor = list(A = A, compute = TRUE, quantiles = q), lincomb = lc.grid)
 Pred = mod.P$summary.lincomb.derived
 list(model_inla = mod.P, pred = Pred, x_grid = x_grid, B_grid=B_grid)
 }
@@ -82,12 +75,7 @@ smooth_inla2 <- function(x,y, Ntrials, offset, family, hyperB = list(prec = list
   A = Matrix::cbind2(cbind(1,x),B)
   # add ncol(A) at the top of A and to y (and Ntrials)
   # used for creating predictions
-  nB = ncol(A)
-  Aplus = rBind(Diagonal(nB), A) # Aplus: to allow predictions with credible regions via B_grid to work
-  yplus = c(rep(NA, nB), y)
-  if (!missing(Ntrials)) Ntrials_plus = c(rep(1, nB), Ntrials) else Ntrials_plus = NULL
-  if (!missing(offset)) offset_plus = c(rep(0, nB), offset) else offset_plus = NULL
-  datalist = list(y= yplus, idx0 = c(1:2,rep(NA,nb)), idx1 = c(NA, NA, 1:nb))
+  datalist = list(y= y, idx0 = c(1:2,rep(NA,nb)), idx1 = c(NA, NA, 1:nb))
   
   # set up an equispaced grid for making prediction 
   x_grid = seq(xrange[1], xrange[2], length = ngrid)
@@ -98,14 +86,16 @@ smooth_inla2 <- function(x,y, Ntrials, offset, family, hyperB = list(prec = list
   # add a row (0,1,0,0,....) for linear effect of x
   intx = rbind(c(1, rep(0,nb+1)),c(0,1, rep(0,nb)))
   B_grid = Matrix(rBind(intx,B_grid))
+  # In the INLA A-matrix approach, the output is c(eta*, eta), so shift B_grid...
+  B_grid_plus =cBind(Matrix(0,nrow = nrow(B_grid), ncol = nrow(A)),B_grid)
   
   # set up INLA call using the A-matrix approach
   hyper.fixed = list(prec = list(initial = log(0.001), fixed=TRUE))
   formula.P = y ~ -1 +
     f(idx0,  model="iid", hyper = hyper.fixed, constr = FALSE) + # intercept
     f(idx1, model="generic", Cmatrix = P, constr = TRUE,  hyper = hyperB)
-  lc.grid = inla.make.lincombs(Predictor = B_grid)
-  mod.P = inla(formula.P,  Ntrials = Ntrials_plus,offset = offset_plus, family = family, data = datalist, control.predictor = list(A = Aplus, compute = TRUE, quantiles = q), lincomb = lc.grid)
+  lc.grid = inla.make.lincombs(Predictor = B_grid_plus)
+  mod.P = inla(formula.P,  Ntrials = Ntrials,offset = offset, family = family, data = datalist, control.predictor = list(A = A, compute = TRUE, quantiles = q), lincomb = lc.grid)
   Pred = mod.P$summary.lincomb.derived
   list(model_inla = mod.P, pred = Pred, x_grid = x_grid, B_grid=B_grid)
 }
@@ -125,12 +115,7 @@ smooth_inla3 <- function(x,group, y, Ntrials, offset, family, hyperB = list(prec
   A = Matrix::cbind2(A,model.matrix(~-1+group ))
   # add ncol(A) at the top of A and to y (and Ntrials)
   # used for creating predictions
-  nB = ncol(A)
-  Aplus = rBind(Diagonal(nB), A) # Aplus: to allow predictions with credible regions via B_grid to work
-  yplus = c(rep(NA, nB), y)
-  if (!missing(Ntrials)) Ntrials_plus = c(rep(1, nB), Ntrials) else Ntrials_plus = NULL
-  if (!missing(offset)) offset_plus = c(rep(0, nB), offset) else offset_plus = NULL
-  datalist = list(y= yplus, idx0 = c(1,rep(NA,nb+ng)), idx1 = c(NA, 1:nb, rep(NA,ng)),
+  datalist = list(y= y, idx0 = c(1,rep(NA,nb+ng)), idx1 = c(NA, 1:nb, rep(NA,ng)),
                   idg = c(rep(NA,(nb+1)), rep(1:ng)))
   
   # use the equispaced grid with x for making prediction 
@@ -139,6 +124,7 @@ smooth_inla3 <- function(x,group, y, Ntrials, offset, family, hyperB = list(prec
   B_grid = Matrix::cbind2(1,B_grid)
   # add a row (1,0,0,0,....) for the intercept
   B_grid = Matrix(rBind(c(1, rep(0,nb)),B_grid))
+  B_grid_plus =cBind(Matrix(0,nrow = nrow(B_grid), ncol = nrow(A)),B_grid)
   # set up INLA call using the A-matrix approach
   hyper.fixed = list(prec = list(initial = log(0.001), fixed=TRUE))
   hyper.group = list(prec = list(prior = "loggamma", param = c(1, 0.01)))
@@ -146,16 +132,15 @@ smooth_inla3 <- function(x,group, y, Ntrials, offset, family, hyperB = list(prec
     f(idx0,  model="iid", hyper = hyper.fixed, constr = FALSE) + # intercept
     f(idx1, model="generic", Cmatrix = basisP$P, constr = TRUE,  hyper = hyperB) +
     f(idg, model = "iid", constr = TRUE, hyper = hyper.group) 
-  lc.grid = inla.make.lincombs(Predictor = B_grid)
-  mod.P = inla(formula.P,  Ntrials = Ntrials_plus,offset = offset_plus, family = family, data = datalist, control.predictor = list(A = Aplus, compute = TRUE, quantiles = q), lincomb = lc.grid)
+  lc.grid = inla.make.lincombs(Predictor = B_grid_plus)
+  mod.P = inla(formula.P,  Ntrials = Ntrials,offset = offset, family = family, data = datalist, control.predictor = list(A = A, compute = TRUE, quantiles = q), lincomb = lc.grid)
   Pred = mod.P$summary.lincomb.derived
-  fitted = mod.P$summary.fitted.values[nB + seq_along(y),]
+  fitted = mod.P$summary.fitted.values[seq_along(y),]
   list(model_inla = mod.P, fitted = fitted, pred = Pred, x_grid = basisP$x_grid, B_grid=B_grid, indices = basisP$indices)
 }
 
 prepare_basis_P0 <- function(x, xrange= c(0,1), ngrid = 100, diff.order = 2, nseg = 20, degree = 3,  eps = 1e-5,  grid_with_x = TRUE){
   # Prepare basis and penalty matrix for data x and a grid
-  #  Bplus_create adds a diagonal matrix in front of B (for A matrix)
   #  Bgrid_with_x makes a grid of c(x, seq(min,max,length = ngrid)
   B = bbase(x, xrange[1], xrange[2], nseg, degree)
   nb = ncol(B)

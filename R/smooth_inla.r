@@ -56,17 +56,10 @@ smooth_inla <- function(data,  Ntrials, family = "gaussian", hyperB, weights, of
   names(datalist)= paste("idx",seq_len(n.pA)-1, sep="") # idx0, idx1, idx2,....
   A.matrix = Amlist[[1]]
   for (i in seq_len(length(Amlist))[-1]) A.matrix= Matrix::cbind2(A.matrix,Amlist[[i]])
-  nB = ncol(A.matrix) # before the Aplus trick
-  A.matrix = rBind(Diagonal(nB), A.matrix) 
-  # this is Aplus: to allow predictions with credible regions via B_grid to work
-  yplus = c(rep(NA, nB), data$y)
-
-  if (!missing(offset)) {
-    if(missing(offset_par)) offset_par = mean(offset)
-    offset_plus = c(rep(offset_par,nB),offset)
-  } else {offset = offset_plus = NULL}
-  if (!missing(Ntrials)) Ntrials_plus = c(rep(1, nB), Ntrials)else {Ntrials =Ntrials_plus = NULL}
-  datalist$y =yplus
+  nB = ncol(A.matrix)
+  if (missing(offset)) offset = NULL
+  if (missing(Ntrials)) Ntrials = NULL
+  datalist$y =data[,1] # response y
 
 
 B_grid = matrix(1, nrow =1, ncol = 1)
@@ -84,8 +77,11 @@ B_grid[,1]= 1 # intercept added to all predictions
 # not counting the 1.1 entry, the k-th block contains the basis for the k-th predictor and its grid
 # the indices are indices
 # indices_B_grid[[k]]$xgrid and $x give the rows in B_grid of the grid and the data of the k-th predictor
-# 
-lc.grid = inla.make.lincombs(Predictor = B_grid)
+#
+# In the INLA A-matrix approach, the output is c(eta*, eta), so shift B_grid...
+B_grid_plus =cBind(Matrix(0,nrow = nrow(B_grid), ncol = nrow(A.matrix)),B_grid)
+
+lc.grid = inla.make.lincombs(Predictor = B_grid_plus)
 
 hyper.group = list(prec = list(prior = "loggamma", param = c(1, 0.01)))
 hyper.fixed = list(prec = list(initial = log(0.001), fixed=TRUE))
@@ -111,40 +107,40 @@ mod.P = NULL
 start = proc.time()[3]
 if (missing(weights)) {
   if (family %in% c("binomial","betabinomial")){
-  mod.P = inla(formula.P, family = family, Ntrials = Ntrials_plus, data = datalist, offset = offset_plus,
+  mod.P = inla(formula.P, family = family, Ntrials = Ntrials, data = datalist, offset = offset,
         control.predictor = list(A = A.matrix, compute = TRUE, quantiles = q, link = NULL), 
                 control.compute = contr.comp,
-                lincomb = lc.grid)
+                lincomb = lc.grid, verbose = verbose)
   } else if (family %in% c("gaussian","t","lognormal")){
-    mod.P = inla(formula.P, family = family, data = datalist, offset = offset_plus,
+    mod.P = inla(formula.P, family = family, data = datalist, offset = offset,
                  control.predictor = list(A = A.matrix, compute = TRUE, quantiles = q, link = NULL), 
                  control.family = list(hyper = list(prec = prior.observation.precision)),
                  control.compute = contr.comp,
-                 lincomb = lc.grid)
+                 lincomb = lc.grid, verbose = verbose)
   } else { 
-  mod.P = inla(formula.P, family = family, data = datalist, offset = offset_plus,
+  mod.P = inla(formula.P, family = family, data = datalist, offset = offset,
                control.predictor = list(A = A.matrix, compute = TRUE, quantiles = q, link = NULL), 
                control.compute = contr.comp,
-               lincomb = lc.grid) 
+               lincomb = lc.grid, verbose = verbose) 
   }
 } else { 
   inla.setOption(enable.inla.argument.weights=TRUE)
   if (family %in% c("binomial","betabinomial")){
-    mod.P = inla(formula.P, family = family, Ntrials = Ntrials_plus, data = datalist, offset = offset_plus,
+    mod.P = inla(formula.P, family = family, Ntrials = Ntrials, data = datalist, offset = offset,
                  control.predictor = list(A = A.matrix, compute = TRUE, quantiles = q, link = NULL), 
                  control.compute = contr.comp,
-                 lincomb = lc.grid)
+                 lincomb = lc.grid, verbose = verbose)
   } else if (family %in% c("gaussian","t","lognormal")){
-    mod.P = inla(formula.P, family = family, data = datalist, weights= weights, offset = offset_plus,
+    mod.P = inla(formula.P, family = family, data = datalist, weights= weights, offset = offset,
                  control.predictor = list(A = A.matrix, compute = TRUE, quantiles = q, link = NULL), 
                  control.family = list(hyper = list(prec = prior.observation.precision)),
                  control.compute = contr.comp,
-                 lincomb = lc.grid)
+                 lincomb = lc.grid, verbose = verbose)
   } else { 
-    mod.P = inla(formula.P, family = family, data = datalist, weights= weights, offset = offset_plus,
+    mod.P = inla(formula.P, family = family, data = datalist, weights= weights, offset = offset,
                  control.predictor = list(A = A.matrix, compute = TRUE, quantiles = q, link = NULL), 
                  control.compute = contr.comp,
-                 lincomb = lc.grid) 
+                 lincomb = lc.grid, verbose = verbose) 
   }       
 }
 end = proc.time()[3]
@@ -157,12 +153,12 @@ Pred.rw = mod.P$summary.lincomb.derived
 x_grid = NULL
 for (k in seq_along(basisP))x_grid = cbind(x_grid, basisP[[k]]$x_grid)
 #fitted = mod.P$summary.fitted.values[nB + (seq_len(nrow(dataX))),]
-fitted = mod.P$summary.linear.predictor[nB + (seq_len(nrow(dataX))),]
+fitted = mod.P$summary.linear.predictor[seq_len(nrow(dataX)),]
 rownames(fitted)= rownames(data)
-coef = mod.P$summary.linear.predictor[1:nB,] # inclusive intercept
+coef = mod.P$summary.linear.predictor[nrow(dataX) + 1:nB,] # inclusive intercept
 rownames(coef)= c("(Intercept)", 1:(nB-1))
 
-list(model_inla = mod.P, x = dataX, y=data$y, Ntrials=Ntrials, offset = offset, group= data$group, intercept = intercept, coefficients = coef,fitted = fitted, pred = Pred.rw, x_grid = x_grid, B_grid=B_grid, indices_B_grid = indices, time = time.P)
+list(model_inla = mod.P, x = dataX, y=datalist$y, Ntrials=Ntrials, offset = offset, group= data$group, intercept = intercept, coefficients = coef,fitted = fitted, pred = Pred.rw, x_grid = x_grid, B_grid=B_grid, indices_B_grid = indices, time = time.P)
 }
 
 
