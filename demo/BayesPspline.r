@@ -4,7 +4,6 @@
 rm(list=ls(all=TRUE))
 library(INLA)
 library(faraway) # for ilogit 
-#source("Rfunctions/smooth_inla123.r")
 library(BayesianPsplines)
 
 Data <- read.csv("../data/germination_Ranlin_transect_wl_ntot.csv")[,-1]
@@ -96,8 +95,6 @@ irangex = rs3$indices$x#
 componentplus = residual + Pred.rw[irangex,"0.5quant"] 
 points(x, backtransform(componentplus) ) # component-plus-residual plot
 
-#source("Rfunctions/smooth_inla.r")  # the most general inla function for Bayesian P-splines
-
 mydata = data.frame(y = Data$y, group = Data$transect, x = Data$wl)
 Ntrials = Data$Ntrials
 rs = NULL  
@@ -120,4 +117,4 @@ k = 1 # first predictor
 pred1 = component_plus_residual(rs, k,transform, backtransform, ylim= ylim, ylab= my.ylab,xlab = my.xlab[1], main = species)
 k = 2 # second predictor
 pred2 = component_plus_residual(rs, k,transform, backtransform, ylim= ylim, ylab= my.ylab,xlab = my.xlab[2], main = species)
-
+rs$model$summary.hyper

@@ -19,7 +19,7 @@ smooth_inla0 <- function(x,y, Ntrials, offset, family, hyperB = list(prec = list
   formula.P = y ~ -1 + f(id.b, model="generic", Cmatrix = P, constr = FALSE, hyper= hyperB)
   datalist = list(y = y, id.b = 1:nb)
   lc.grid = inla.make.lincombs(Predictor = B_grid_plus)
-  mod.P = inla(formula.P,  Ntrials = Ntrials, offset = offset,family = family, data = datalist, control.predictor = list(A = B, compute = TRUE, quantiles = q), lincomb = lc.grid)
+  mod.P = inla(formula.P,  Ntrials = Ntrials, offset = offset,family = family, data = datalist, control.predictor = list(A = B, compute = TRUE), quantiles = q, lincomb = lc.grid)
   Pred = mod.P$summary.lincomb.derived
   list(model_inla = mod.P, pred = Pred, x_grid = x_grid, B_grid=B_grid)
 }
@@ -56,7 +56,7 @@ formula.P = y ~ -1 +
   f(idx0,  model="iid", hyper = hyper.fixed, constr = FALSE) + # intercept
   f(idx1, model="generic", Cmatrix = P, constr = TRUE,  hyper = hyperB)
 lc.grid = inla.make.lincombs(Predictor = B_grid_plus)
-mod.P = inla(formula.P,  Ntrials = Ntrials, offset = offset, family = family, data = datalist, control.predictor = list(A = A, compute = TRUE, quantiles = q), lincomb = lc.grid)
+mod.P = inla(formula.P,  Ntrials = Ntrials, offset = offset, family = family, data = datalist, control.predictor = list(A = A, compute = TRUE), quantiles = q, lincomb = lc.grid)
 Pred = mod.P$summary.lincomb.derived
 list(model_inla = mod.P, pred = Pred, x_grid = x_grid, B_grid=B_grid)
 }
@@ -95,7 +95,7 @@ smooth_inla2 <- function(x,y, Ntrials, offset, family, hyperB = list(prec = list
     f(idx0,  model="iid", hyper = hyper.fixed, constr = FALSE) + # intercept
     f(idx1, model="generic", Cmatrix = P, constr = TRUE,  hyper = hyperB)
   lc.grid = inla.make.lincombs(Predictor = B_grid_plus)
-  mod.P = inla(formula.P,  Ntrials = Ntrials,offset = offset, family = family, data = datalist, control.predictor = list(A = A, compute = TRUE, quantiles = q), lincomb = lc.grid)
+  mod.P = inla(formula.P,  Ntrials = Ntrials,offset = offset, family = family, data = datalist, control.predictor = list(A = A, compute = TRUE), quantiles = q, lincomb = lc.grid)
   Pred = mod.P$summary.lincomb.derived
   list(model_inla = mod.P, pred = Pred, x_grid = x_grid, B_grid=B_grid)
 }
@@ -133,7 +133,7 @@ smooth_inla3 <- function(x,group, y, Ntrials, offset, family, hyperB = list(prec
     f(idx1, model="generic", Cmatrix = basisP$P, constr = TRUE,  hyper = hyperB) +
     f(idg, model = "iid", constr = TRUE, hyper = hyper.group) 
   lc.grid = inla.make.lincombs(Predictor = B_grid_plus)
-  mod.P = inla(formula.P,  Ntrials = Ntrials,offset = offset, family = family, data = datalist, control.predictor = list(A = A, compute = TRUE, quantiles = q), lincomb = lc.grid)
+  mod.P = inla(formula.P,  Ntrials = Ntrials,offset = offset, family = family, data = datalist, control.predictor = list(A = A, compute = TRUE), quantiles = q, lincomb = lc.grid)
   Pred = mod.P$summary.lincomb.derived
   fitted = mod.P$summary.fitted.values[seq_along(y),]
   list(model_inla = mod.P, fitted = fitted, pred = Pred, x_grid = basisP$x_grid, B_grid=B_grid, indices = basisP$indices)
