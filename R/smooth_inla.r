@@ -14,16 +14,19 @@
 #' in a GAM. Response and predictors can have user-defined names, but the grouping factor must have name 'group'
 #' @param Ntrials Number of binomial trials with same length as y, if family is binomial
 #' @param family The family argument passed to INLA, see \code{\link[INLA]{inla}} 
-#' @param hyperB A list of hyperparameter for each of the predictors
-#' @param offset A optional offset for the linear predictor
+#' @param hyperB A list of hyperparameter for each of the predictors. If missing,
+#' the PC-prior for precision, i.e. a type-2 Gumbel with (default) lambda = 1.427 (sd(u) = 1, u=3.22, alpha = 0.01). 
+#' See inla.doc("pc.prec"). 
+#' @param lambda parameter of the type-2 Gumbel, used if hyperB is missing (default 1.428)
+#' @param offset A optional offset for the linear predictor 
 #' @param offset_par Value of the offset used for predictions.
 #' @param xrange A matrix with in rows the min and max of the range of 
-#' the B-spline basis for each predictor. Default: the data range of each predictor
+#' the B-spline basis for each predictor. Default: \code{\link{extend_range}} giving 10\% extension at both sides
 #' @param ngrid Number of grid points  for prediction. Default 100
 #' @examples Example program in BayesianPsplines\demo\BayesPspline.r 
 #' @export
 
-smooth_inla <- function(data,  Ntrials, family = "gaussian", hyperB, weights, offset,
+smooth_inla <- function(data,  Ntrials, family = "gaussian", hyperB, lambda, weights, offset,
      offset_par, xrange, ngrid = 100, nseg = 20 , degree = rep(3,ncol(data)), 
     diff.order = rep(2,ncol(data)), grid_with_x = TRUE, quantiles = c(0.05, 0.5, 0.95), verbose = FALSE ){
 # smooth_inla assumes that data consists of the columns (in this order)
@@ -43,6 +46,13 @@ smooth_inla <- function(data,  Ntrials, family = "gaussian", hyperB, weights, of
     Amlist[[k+1]] = basisP[[k]]$B
   }
   Amlist$Group = Group
+  if (missing(hyperB)){
+    alpha = 0.01
+    if (missing(lambda)){   # lambda = -log(alpha)/U =1.428
+      sd_marg_u = 1; U = sd_marg_u /0.31
+    } else  U = -log(alpha)/lambda
+     hyperB = list(prec = list(prior="pc.prec", param=c(U,0.01)))
+  }
   if (length(hyperB)==1) hyperB = list(hyperB,hyperB,hyperB,hyperB,hyperB,hyperB,hyperB,hyperB,hyperB,hyperB)
   pA = sapply(Amlist,ncol)
   names(pA)= names(Amlist)
