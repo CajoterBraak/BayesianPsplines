@@ -16,7 +16,7 @@
 #' @param family The family argument passed to INLA, see \code{\link[INLA]{inla}} 
 #' @param hyperB A list of hyperparameter for each of the predictors. If missing,
 #' the PC-prior for precision, i.e. a type-2 Gumbel with (default) lambda = 1.427 (sd(u) = 1, u=3.22, alpha = 0.01). 
-#' See inla.doc("pc.prec"). 
+#' See inla.doc("pc.prec") in \code{\link[INLA]{pc.prec}}: 
 #' @param lambda parameter of the type-2 Gumbel, used if hyperB is missing (default 1.428)
 #' @param offset A optional offset for the linear predictor 
 #' @param offset_par Value of the offset used for predictions.
@@ -26,7 +26,7 @@
 #' @examples Example program in BayesianPsplines\demo\BayesPspline.r 
 #' @export
 
-smooth_inla <- function(data,  Ntrials, family = "gaussian", hyperB, lambda, weights, offset,
+smooth_inla <- function(data, Ntrials, fixed.formula = ~1, family = "gaussian", hyperB, lambda, weights, offset,
      offset_par, xrange, ngrid = 100, nseg = 20 , degree = rep(3,ncol(data)), 
     diff.order = rep(2,ncol(data)), grid_with_x = TRUE, quantiles = c(0.05, 0.5, 0.95), verbose = FALSE ){
 # smooth_inla assumes that data consists of the columns (in this order)
@@ -38,7 +38,7 @@ smooth_inla <- function(data,  Ntrials, family = "gaussian", hyperB, lambda, wei
   basisP = list()
   if (is.null(data$group)) dataX = data[,-1, drop = FALSE] else dataX = data[,-c(1,2), drop = FALSE]
   if (is.null(data$group)) Group = NULL else Group = model.matrix(~-1+group, data)
-  Amlist = list(intercept = matrix(1, nrow = nrow(data), ncol = 1))
+  Amlist = list(intercept = model.matrix(fixed.formula, data))  # matrix(1, nrow = nrow(data), ncol = 1))
   for (k in seq_len(ncol(dataX))) {
     if (missing(xrange)) xrange.k = extend_range(dataX[[k]]) else 
       if (is.matrix(xrange)) xrange.k = xrange[k,] else xrange.k = xrange

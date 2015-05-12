@@ -1,5 +1,5 @@
 #' @export
-component_plus_residual = function(rs, k=1, transform = function(x){x}, backtransform = function(x){x}, mplot = 2, yscale = 1, ylim = NULL, ...){
+component_plus_residual = function(rs, k=1, fixed.predictor = FALSE, transform = function(x){x}, backtransform = function(x){x}, mplot = 2, yscale = 1, ylim = NULL, ...){
   # rs is an object created using a call to smooth_inla
   # k is the number of predictor to fit
   # specialized at present for (beta)binomial data; see transform and backtransform
@@ -21,7 +21,7 @@ component_plus_residual = function(rs, k=1, transform = function(x){x}, backtran
   if (is.null(rs$Ntrials)) yy = rs$y  else yy = rs$y/rs$Ntrials
   observed.tr = transform(yy)  # on transformed scale
   residual = observed.tr - yhat 
-  if (!is.null(rs$indices_B_grid[[k]]$x) && (ncol(rs$x_grid)>1||!is.null(rs$group)))  {
+  if (!is.null(rs$indices_B_grid[[k]]$x) && (ncol(rs$x_grid)>1||!is.null(rs$group)|| nrow(rs$model$summary.random$idx0)>1))  {
     irangex = rs$indices_B_grid[[k]]$x 
     componentplus = residual + rs$pred[irangex,"0.5quant"] 
   }else componentplus = observed.tr  # or find closest x_grid to x and use that fit!
