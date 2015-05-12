@@ -11,7 +11,7 @@
 #' @param data A data frame with columns y [group] x1 x2 ... , all numeric except
 #' group which is a factor and is optional. The response y should always be the first 
 #' column, and, if present, group second. All further vectors are used a predictors
-#' in a GAM. Response and predictors can have user-defined names, but the grouping factor must have name \'group\'
+#' in a GAM. Response and predictors can have user-defined names, but the grouping factor must have name 'group'
 #' @param Ntrials Number of binomial trials with same length as y, if family is binomial
 #' @param family The family argument passed to INLA, see \code{\link[INLA]{inla}} 
 #' @param hyperB A list of hyperparameter for each of the predictors
@@ -20,8 +20,7 @@
 #' @param xrange A matrix with in rows the min and max of the range of 
 #' the B-spline basis for each predictor. Default: the data range of each predictor
 #' @param ngrid Number of grid points  for prediction. Default 100
- 
-#' @examples Example program in BayesPspline.r 
+#' @examples Example program in BayesianPsplines\demo\BayesPspline.r 
 #' @export
 
 smooth_inla <- function(data,  Ntrials, family = "gaussian", hyperB, weights, offset,
@@ -36,7 +35,7 @@ smooth_inla <- function(data,  Ntrials, family = "gaussian", hyperB, weights, of
   basisP = list()
   if (is.null(data$group)) dataX = data[,-1, drop = FALSE] else dataX = data[,-c(1,2), drop = FALSE]
   if (is.null(data$group)) Group = NULL else Group = model.matrix(~-1+group, data)
-  Amlist = list(intercept = matrix(1, nrow = length(data$y), ncol = 1))
+  Amlist = list(intercept = matrix(1, nrow = nrow(data), ncol = 1))
   for (k in seq_len(ncol(dataX))) {
     if (missing(xrange)) xrange.k = extend_range(dataX[[k]]) else 
       if (is.matrix(xrange)) xrange.k = xrange[k,] else xrange.k = xrange

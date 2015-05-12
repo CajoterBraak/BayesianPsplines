@@ -1,4 +1,4 @@
-#' @title extend_range
+#' @title extend_range extends the range of the predictors.
 #'
 #' @description
 #' \code{extend_range} extends the range of the predictors. Extension and bounds can be specified
