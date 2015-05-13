@@ -1,12 +1,27 @@
+#' @title Component plus residual plots for smooth_inla fits
+#'
+#' @description
+#' \code{component_plus_residual} calculates and plots the smooth produced by \code{\link{smooth_inla}}. 
+#' 
+#'
+#' @details   \code{component_plus_residual} postprocesses the output of \code{\link{smooth_inla}} that also
+#' contains the inla object.  See also the example in \code{\link{smooth_inla}}.
+#'@param  rs is an object created by smooth_inla
+#'@param  k is the number of predictor to fit (default 1)
+#'@param  transform a function to transform the observed scale to the linear predictor (default identity) 
+#'@param  backtransform a function to transform from the linear predictor to the observed scale (default identity) 
+#'@param  mplot what to plot.  2  (default): plot component plus residual, 1: plot raw data or proportion (if Ntrials set)
+#'0: no plotting
+#'@param yscale multiplier for plotting observed data when mplot = 1; when Ntrials is set, yscale = 100 with mplot= 1 then plots row percentages 
+#'@examples 
+#'# See example in smooth_inla for mydata2
+#'
+#'  rs2 = smooth_inla(mydata2)
+#'  predz = component_plus_residual(rs2)
+#'  predx = component_plus_residual(rs2, k=2)
+#'# See demo/BayesPspline.r for use of transform/backtransform
 #' @export
-component_plus_residual = function(rs, k=1, fixed.predictor = FALSE, transform = function(x){x}, backtransform = function(x){x}, mplot = 2, yscale = 1, ylim = NULL, ...){
-  # rs is an object created using a call to smooth_inla
-  # k is the number of predictor to fit
-  # specialized at present for (beta)binomial data; see transform and backtransform
-  # mplot ==1 : plot raw data or proportion (if Ntrials set), 
-  # mplot ==2 : plot component _ plus_ residual
-  # yscale = multiplier of observed data when mplot = 1 (and backtransform is not used)
-  #          use yscale = 100 to obtain percentages
+component_plus_residual = function(rs, k=1, transform = function(x){x}, backtransform = function(x){x}, mplot = 2, yscale = 1, ylim = NULL, ...){
   x_grid = rs$x_grid[,k] ; irange = rs$indices[[k]]$grid#
   y_pred_mean = rs$pred[irange,"mean"] 
   y_pred_sd =  rs$pred[irange,"sd"]

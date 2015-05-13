@@ -7,12 +7,14 @@
 #'
 #' @details   \code{smooth_inla} is a wrapper that uses INLA for the calculations. see \code{\link[INLA]{inla}}
 #' The predictors are transformed into B-splines and fitted using a penalty matrix tau*P 
-#' with P =D\'D with D differences of \code{diff.order}.
+#' with P =D'D with D differences of \code{diff.order}.
 #' @param data A data frame with columns y [group] x1 x2 ... , all numeric except
 #' group which is a factor and is optional. The response y should always be the first 
 #' column, and, if present, group second. All further vectors are used a predictors
 #' in a GAM. Response and predictors can have user-defined names, but the grouping factor must have name 'group'
 #' @param Ntrials Number of binomial trials with same length as y, if family is binomial
+#' @param data.linear optional data frame with predictors used in the parametric linear part of the model
+#' @param fixed.formula optional formula containing the parametric model (default: additive model with all variables in data.linear)
 #' @param family The family argument passed to INLA, see \code{\link[INLA]{inla}} 
 #' @param hyperB A list of hyperparameter for each of the predictors. If missing,
 #' the PC-prior for precision, i.e. a type-2 Gumbel with (default) lambda = 1.427 (sd(u) = 1, u=3.22, alpha = 0.01). 
@@ -23,10 +25,72 @@
 #' @param xrange A matrix with in rows the min and max of the range of 
 #' the B-spline basis for each predictor. Default: \code{\link{extend_range}} giving 10\% extension at both sides
 #' @param ngrid Number of grid points  for prediction. Default 100
-#' @examples Example program in BayesianPsplines\demo\BayesPspline.r 
+#' @examples 
+#'  # Bayesian P-splines using INLA, 1 dimensional smooth                             
+#'                                                                                    
+#'  # Simulate data                                                                   
+#'  n =  50                                                                           
+#'  set.seed(2013)                                                                    
+#'  x = seq(0, 1, length = n)                                                         
+#'  y0 = sin(14 * x)                                                                  
+#'  sd = 0.1                                                                          
+#'  y = y0 + rnorm(n) * sd                                                            
+#'  library(INLA)                                                                     
+#'  library(BayesianPsplines)                                                         
+#'  mydata = data.frame(y = y, x= x)                                                  
+#'  rs = smooth_inla(mydata)                                                          
+#'  ## the default prior used here is:                                                
+#'  # hyperGumbel = list(prec = list(prior="pc.prec", param=c(U=1/0.31,alpha=0.01)))  
+#'  # rs = smooth_inla(mydata, hyperB=hyperGumbel)                                    
+#'  # rs = smooth_inla(mydata, lambda = 1.427603) #                                   
+#'  ##                                                                                
+#'  summary(rs$model) # rs$model is the inla object                                   
+#'  pred = component_plus_residual(rs)                                                
+#'  names(pred$pred.grid)# predicted values for gridpoints                            
+#'  names(pred$pred.data) # predicted values for data                                 
+#'  # as visible in a fit with few predictor points                                   
+#'  rs2 = smooth_inla(mydata, ngrid = 10)                                             
+#'  pred2 = component_plus_residual(rs2, mplot = 0)                                   
+#'  pred2$pred.grid                                                                   
+#'                                                                                    
+#'  # Bayesian P-splines using INLA, 2 dimensional                                                                                 
+#'  # smooth + linear, smooth + smooth
+#'  # Simulate data
+#'  n =  50 # 
+#'  set.seed(2013)
+#'  z = seq(0, 1, length = n)
+#'  x = runif(n)
+#'  x = x - mean(x)
+#'  y0 = 5*x + sin(14 * z) 
+#'  sd = 0.1
+#'  y = y0 + rnorm(n) * sd
+#'  library(INLA)
+#'  library(BayesianPsplines)
+#'  # smooth(z)+smooth(x)
+#'  mydata2 = mydata = data.frame(y = y, z= z, x = x)
+#'  rs2 = smooth_inla(mydata2)
+#'  rs2$model # inla object 
+#'  rs2$mod$summary.random$idx0 # intercept
+#'  coef(rs2)  # intercept, B-spline coefs.
+#'  predz = component_plus_residual(rs2)
+#'  predx = component_plus_residual(rs2, k=2)
+#'  # smooth(z) + linear(x)
+#'  mydata = data.frame(y = y, z= z)
+#'  data.linear = data.frame(x = x - mean(x))
+#'  # make sure fixed (quantitative) predictors have mean 0 
+#'  # for component_plus_residual to have a meaningful response scale
+#'  hyperGumbel = list(prec = list(prior="pc.prec", param=c(U=1/0.31,alpha=0.01)))
+#'  rs = smooth_inla(mydata, data.linear = data.linear)
+#'  mod = rs$model # inla object 
+#'  mod$summary.random$idx0
+#'  coef(rs)  # intercept, linear coefs, B-spline coefs.
+#'  pred = component_plus_residual(rs)
+#'  # currently no plots available for linear terms...
+#' 
+#' Other example programs are in the BayesPspline/demo folder
 #' @export
 
-smooth_inla <- function(data, Ntrials, fixed.formula = ~1, family = "gaussian", hyperB, lambda, weights, offset,
+smooth_inla <- function(data, Ntrials, data.linear, fixed.formula, family = "gaussian", hyperB, lambda, weights, offset,
      offset_par, xrange, ngrid = 100, nseg = 20 , degree = rep(3,ncol(data)), 
     diff.order = rep(2,ncol(data)), grid_with_x = TRUE, quantiles = c(0.05, 0.5, 0.95), verbose = FALSE ){
 # smooth_inla assumes that data consists of the columns (in this order)
@@ -38,7 +102,13 @@ smooth_inla <- function(data, Ntrials, fixed.formula = ~1, family = "gaussian", 
   basisP = list()
   if (is.null(data$group)) dataX = data[,-1, drop = FALSE] else dataX = data[,-c(1,2), drop = FALSE]
   if (is.null(data$group)) Group = NULL else Group = model.matrix(~-1+group, data)
-  Amlist = list(intercept = model.matrix(fixed.formula, data))  # matrix(1, nrow = nrow(data), ncol = 1))
+  if (missing(data.linear))  {
+    Amlist = list(intercept = matrix(1, nrow = nrow(data), ncol = 1))
+    } else {
+    if (missing(fixed.formula)) 
+      Amlist = list(fixed = as.matrix(cbind(1, data.linear))) else
+      Amlist = list(fixed = model.matrix(fixed.formula, data.linear))  # 
+  }
   for (k in seq_len(ncol(dataX))) {
     if (missing(xrange)) xrange.k = extend_range(dataX[[k]]) else 
       if (is.matrix(xrange)) xrange.k = xrange[k,] else xrange.k = xrange
